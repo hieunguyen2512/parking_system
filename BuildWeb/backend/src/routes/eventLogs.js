@@ -2,14 +2,27 @@ const router = require('express').Router();
 const auth = require('../middleware/auth');
 const { pool } = require('../db');
 
-// GET /api/event-logs?type=&search=&page=1&limit=50&from=&to=
+const TYPE_GROUPS = {
+  vehicle:  ['vehicle_entry','vehicle_exit','vehicle_entry_guest','vehicle_exit_guest'],
+  auth:     ['auth_success_owner','auth_success_delegate','auth_failed_face','auth_failed_plate','auth_failed_mismatch','auth_fallback_guest'],
+  barrier:  ['barrier_opened','barrier_closed','barrier_manual_open'],
+  payment:  ['payment_deducted','payment_failed_balance','payment_guest_paid'],
+  device:   ['device_offline','device_online','arduino_disconnected','camera_error'],
+  alert:    ['low_balance_alert','session_abnormal','lot_full','system_offline_mode'],
+};
+
+// GET /api/event-logs?type=&typeGroup=&search=&page=1&limit=50&from=&to=
 router.get('/', auth, async (req, res, next) => {
   try {
-    const { type, search = '', page = 1, limit = 50, from, to } = req.query;
+    const { type, typeGroup, search = '', page = 1, limit = 50, from, to } = req.query;
     const params = [];
     const conditions = [];
 
-    if (type) {
+    if (typeGroup && TYPE_GROUPS[typeGroup]) {
+      // Lọc theo nhóm loại sự kiện
+      params.push(TYPE_GROUPS[typeGroup]);
+      conditions.push(`el.event_type = ANY($${params.length})`);
+    } else if (type) {
       params.push(type);
       conditions.push(`el.event_type = $${params.length}`);
     }
@@ -37,7 +50,7 @@ router.get('/', auth, async (req, res, next) => {
         el.*,
         a.username AS admin_username
       FROM event_logs el
-      LEFT JOIN admins a ON a.id = el.admin_id
+      LEFT JOIN admins a ON a.admin_id = el.admin_id
       ${where}
       ORDER BY el.created_at DESC
       LIMIT $${params.length - 1} OFFSET $${params.length}

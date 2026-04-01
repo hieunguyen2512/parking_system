@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../store/useStore';
-import { Wallet, ArrowDownLeft, ArrowUpRight, RefreshCw, Plus, X } from 'lucide-react';
+import { withdrawApi } from '../api/services';
+import { Wallet, ArrowDownLeft, ArrowUpRight, RefreshCw, Plus, X, Banknote, Clock } from 'lucide-react';
 
 function fmtCurrency(n) {
   if (n == null) return '—';
@@ -36,17 +37,41 @@ const TX_LABEL = {
 
 export default function WalletPage() {
   const { wallet, walletTransactions, walletTotal, walletPage, fetchWallet, fetchTransactions, topup } = useStore();
-  const [showTopup, setShowTopup] = useState(false);
-  const [amount, setAmount] = useState('');
-  const [gateway, setGateway] = useState('momo');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [showTopup, setShowTopup]       = useState(false);
+  const [showWithdraw, setShowWithdraw] = useState(false);
+  const [amount, setAmount]             = useState('');
+  const [gateway, setGateway]           = useState('momo');
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState('');
+  const [success, setSuccess]           = useState('');
+
+  // Rút tiền
+  const [wForm, setWForm]   = useState({ amount: '', bank_name: '', bank_account: '', account_name: '' });
+  const [wLoading, setWLoading] = useState(false);
+  const [withdrawals, setWithdrawals] = useState([]);
 
   useEffect(() => {
     fetchWallet();
     fetchTransactions(1);
+    withdrawApi.history().then(r => setWithdrawals(r.data || [])).catch(() => {});
   }, []);
+
+  async function handleWithdraw(e) {
+    e.preventDefault();
+    setWLoading(true);
+    setError(''); setSuccess('');
+    try {
+      const amt = parseInt(wForm.amount.replace(/\D/g, ''), 10);
+      await withdrawApi.request({ ...wForm, amount: amt });
+      setSuccess('Yêu cầu rút tiền đã được gửi, chờ admin xử lý.');
+      setWForm({ amount: '', bank_name: '', bank_account: '', account_name: '' });
+      setShowWithdraw(false);
+      fetchWallet();
+      const r = await withdrawApi.history();
+      setWithdrawals(r.data || []);
+    } catch (err) { setError(err.message); }
+    finally { setWLoading(false); }
+  }
 
   async function handleTopup(e) {
     e.preventDefault();
@@ -72,10 +97,16 @@ export default function WalletPage() {
         <p className="text-blue-200 text-sm">Số dư hiện tại</p>
         <p className="text-3xl font-bold mt-1">{fmtCurrency(wallet?.balance)}</p>
         <button
-          onClick={() => { setShowTopup(v => !v); setError(''); setSuccess(''); }}
+          onClick={() => { setShowTopup(v => !v); setShowWithdraw(false); setError(''); setSuccess(''); }}
           className="mt-4 flex items-center gap-1.5 bg-white text-blue-600 font-semibold text-sm px-4 py-2 rounded-xl hover:bg-blue-50"
         >
           <Plus size={16} /> Nạp tiền
+        </button>
+        <button
+          onClick={() => { setShowWithdraw(v => !v); setShowTopup(false); setError(''); setSuccess(''); }}
+          className="mt-2 flex items-center gap-1.5 bg-blue-700 bg-opacity-50 text-white font-semibold text-sm px-4 py-2 rounded-xl hover:bg-opacity-70"
+        >
+          <Banknote size={16} /> Rút tiền
         </button>
       </div>
 
@@ -148,6 +179,76 @@ export default function WalletPage() {
             {loading ? 'Đang xử lý...' : `Nạp ${amount ? fmtCurrency(parseInt(amount, 10)) : ''}`}
           </button>
         </form>
+      )}
+
+      {/* Form rút tiền */}
+      {showWithdraw && (
+        <form onSubmit={handleWithdraw} className="card border-2 border-orange-200 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-slate-800">Rút tiền về tài khoản</h3>
+            <button type="button" onClick={() => setShowWithdraw(false)}><X size={18} className="text-slate-400" /></button>
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Số tiền rút (VND)</label>
+            <input type="number" className="input-field" placeholder="Tối thiểu 10,000đ" min={10000}
+              value={wForm.amount} onChange={e => setWForm(f => ({ ...f, amount: e.target.value }))} required />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Ngân hàng</label>
+            <input type="text" className="input-field" placeholder="VD: Vietcombank, BIDV..." maxLength={100}
+              value={wForm.bank_name} onChange={e => setWForm(f => ({ ...f, bank_name: e.target.value }))} required />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Số tài khoản</label>
+            <input type="text" className="input-field" placeholder="Số tài khoản ngân hàng" maxLength={50}
+              value={wForm.bank_account} onChange={e => setWForm(f => ({ ...f, bank_account: e.target.value }))} required />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Tên chủ tài khoản</label>
+            <input type="text" className="input-field" placeholder="Họ và tên" maxLength={100}
+              value={wForm.account_name} onChange={e => setWForm(f => ({ ...f, account_name: e.target.value }))} required />
+          </div>
+          <button type="submit" disabled={wLoading} className="btn-primary bg-orange-500 hover:bg-orange-600">
+            {wLoading ? 'Đang xử lý...' : 'Gửi yêu cầu rút tiền'}
+          </button>
+        </form>
+      )}
+
+      {/* Lịch sử rút tiền */}
+      {withdrawals.length > 0 && (
+        <div>
+          <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-1">
+            <Clock size={14} /> Yêu cầu rút tiền ({withdrawals.length})
+          </p>
+          <div className="space-y-2">
+            {withdrawals.map(w => {
+              const statusMap = {
+                pending:   { label: 'Đang xử lý', cls: 'bg-yellow-100 text-yellow-700' },
+                approved:  { label: 'Đã duyệt',   cls: 'bg-green-100 text-green-700' },
+                rejected:  { label: 'Từ chối',    cls: 'bg-red-100 text-red-600' },
+              };
+              const s = statusMap[w.status] || { label: w.status, cls: 'bg-slate-100 text-slate-600' };
+              return (
+                <div key={w.request_id} className="card flex items-center gap-3">
+                  <div className="w-9 h-9 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Banknote size={18} className="text-orange-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-800">{w.bank_name} – {w.bank_account}</p>
+                    <p className="text-xs text-slate-400">{w.account_name}</p>
+                    <p className="text-xs text-slate-300">{fmtDateTime(w.created_at)}</p>
+                    {w.admin_note && <p className="text-xs text-slate-500 mt-0.5">GC: {w.admin_note}</p>}
+                  </div>
+                  <div className="text-right flex-shrink-0 space-y-1">
+                    <p className="font-semibold text-sm text-red-500">-{fmtCurrency(w.amount)}</p>
+                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${s.cls}`}>{s.label}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* Lịch sử giao dịch */}

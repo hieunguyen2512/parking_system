@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
-import { mockEventLogs } from '../data/mockData'
-import { Search, X, RefreshCw, Download } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { eventLogsApi } from '../api/services'
+import { Search, X, RefreshCw, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import clsx from 'clsx'
 
 const EventConfig = {
@@ -24,6 +24,7 @@ const EventConfig = {
   device_online:         { label:'TB trực tuyến',    color:'bg-emerald-100 text-emerald-700' },
   arduino_disconnected:  { label:'Arduino mất kết nối', color:'bg-rose-100 text-rose-700'},
   session_abnormal:      { label:'Phiên bất thường', color:'bg-rose-100 text-rose-700'   },
+  session_force_ended:   { label:'Kết thúc thủ công', color:'bg-rose-100 text-rose-700'  },
   camera_error:          { label:'Lỗi camera',       color:'bg-rose-100 text-rose-700'   },
   system_offline_mode:   { label:'Chế độ offline',   color:'bg-gray-100 text-gray-700'   },
   sync_completed:        { label:'Đồng bộ xong',     color:'bg-green-100 text-green-700' },
@@ -33,34 +34,16 @@ const EventConfig = {
 
 const fmtTime = d => new Date(d).toLocaleString('vi-VN', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit' })
 
-// Simulate new logs arriving
-const extraLogs = [
-  { event_id:'e-extra1', event_type:'vehicle_entry', license_plate:'51K-001.11', description:'Xe vào – xác thực thành công', created_at: new Date(), severity:'info' },
-  { event_id:'e-extra2', event_type:'barrier_opened', license_plate:'51K-001.11', description:'Barrier cổng vào mở', created_at: new Date(), severity:'info' },
-]
-
 export default function EventLogs() {
-  const [logs, setLogs] = useState(mockEventLogs)
-  const [search, setSearch] = useState('')
+  const [logs, setLogs]           = useState([])
+  const [total, setTotal]         = useState(0)
+  const [page, setPage]           = useState(1)
+  const [loading, setLoading]     = useState(false)
+  const [search, setSearch]       = useState('')
   const [filterType, setFilterType] = useState('all')
   const [autoRefresh, setAutoRefresh] = useState(false)
   const timerRef = useRef(null)
-  const extraIdx = useRef(0)
-
-  useEffect(() => {
-    if (autoRefresh) {
-      timerRef.current = setInterval(() => {
-        if (extraIdx.current < extraLogs.length) {
-          const newLog = { ...extraLogs[extraIdx.current], created_at: new Date(), event_id: 'new-' + Date.now() }
-          setLogs(prev => [newLog, ...prev])
-          extraIdx.current++
-        }
-      }, 5000)
-    } else {
-      clearInterval(timerRef.current)
-    }
-    return () => clearInterval(timerRef.current)
-  }, [autoRefresh])
+  const LIMIT = 50
 
   const typeOptions = [
     { value:'all',      label:'Tất cả' },
@@ -72,26 +55,41 @@ export default function EventLogs() {
     { value:'alert',    label:'Cảnh báo' },
   ]
 
-  const typeGroups = {
-    vehicle:  ['vehicle_entry','vehicle_exit','vehicle_entry_guest','vehicle_exit_guest'],
-    auth:     ['auth_success_owner','auth_success_delegate','auth_failed_face','auth_failed_plate','auth_failed_mismatch','auth_fallback_guest'],
-    barrier:  ['barrier_opened','barrier_closed','barrier_manual_open'],
-    payment:  ['payment_deducted','payment_failed_balance','payment_guest_paid'],
-    device:   ['device_offline','device_online','arduino_disconnected','camera_error'],
-    alert:    ['low_balance_alert','session_abnormal','lot_full'],
-  }
+  const fetchLogs = useCallback(async (p = 1) => {
+    setLoading(true)
+    try {
+      const params = { page: p, limit: LIMIT }
+      if (search)                      params.search    = search
+      if (filterType !== 'all')        params.typeGroup = filterType
+      const res = await eventLogsApi.list(params)
+      setLogs(res.data || [])
+      setTotal(res.total || 0)
+      setPage(p)
+    } catch {}
+    finally { setLoading(false) }
+  }, [search, filterType])
 
-  const filtered = logs.filter(e => {
-    const matchSearch = !search || e.description?.toLowerCase().includes(search.toLowerCase())
-      || e.license_plate?.toLowerCase().includes(search.toLowerCase())
-    const matchType = filterType === 'all' || typeGroups[filterType]?.includes(e.event_type)
-    return matchSearch && matchType
-  })
+  // Fetch on filter change, reset to page 1
+  useEffect(() => {
+    fetchLogs(1)
+  }, [search, filterType])
+
+  // Auto-refresh
+  useEffect(() => {
+    if (autoRefresh) {
+      timerRef.current = setInterval(() => fetchLogs(1), 10000)
+    } else {
+      clearInterval(timerRef.current)
+    }
+    return () => clearInterval(timerRef.current)
+  }, [autoRefresh, fetchLogs])
+
+  const totalPages = Math.ceil(total / LIMIT)
 
   const handleExport = () => {
     const rows = [
       ['Thời gian','Loại sự kiện','Biển số','Mô tả'],
-      ...filtered.map(e => [fmtTime(e.created_at), e.event_type, e.license_plate ?? '', e.description ?? ''])
+      ...logs.map(e => [fmtTime(e.created_at), e.event_type, e.license_plate ?? '', e.description ?? ''])
     ]
     const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n')
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
@@ -137,13 +135,20 @@ export default function EventLogs() {
         </button>
 
         <button
+          onClick={() => fetchLogs(page)}
+          className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700 transition-colors"
+        >
+          <RefreshCw size={14} /> Tải lại
+        </button>
+
+        <button
           onClick={handleExport}
           className="ml-auto flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg text-sm text-gray-700 transition-colors"
         >
           <Download size={14} /> Xuất CSV
         </button>
 
-        <span className="text-sm text-gray-500">{filtered.length} sự kiện</span>
+        <span className="text-sm text-gray-500">{total} sự kiện</span>
       </div>
 
       {/* Table */}
@@ -158,10 +163,14 @@ export default function EventLogs() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.map(e => {
+              {loading ? (
+                <tr><td colSpan={4} className="px-5 py-10 text-center text-gray-400">Đang tải...</td></tr>
+              ) : logs.length === 0 ? (
+                <tr><td colSpan={4} className="px-5 py-10 text-center text-gray-400">Không tìm thấy kết quả</td></tr>
+              ) : logs.map(e => {
                 const cfg = EventConfig[e.event_type]
                 return (
-                  <tr key={e.event_id} className="hover:bg-gray-50">
+                  <tr key={e.event_id || e.log_id} className="hover:bg-gray-50">
                     <td className="px-5 py-3 text-gray-500 text-xs font-mono whitespace-nowrap">
                       {fmtTime(e.created_at)}
                     </td>
@@ -178,13 +187,31 @@ export default function EventLogs() {
                   </tr>
                 )
               })}
-              {filtered.length === 0 && (
-                <tr><td colSpan={4} className="px-5 py-10 text-center text-gray-400">Không tìm thấy kết quả</td></tr>
-              )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Phân trang */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <button
+            disabled={page <= 1}
+            onClick={() => fetchLogs(page - 1)}
+            className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <span className="text-sm text-gray-600">Trang {page} / {totalPages}</span>
+          <button
+            disabled={page >= totalPages}
+            onClick={() => fetchLogs(page + 1)}
+            className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
     </div>
   )
 }

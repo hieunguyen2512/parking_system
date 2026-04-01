@@ -5,15 +5,79 @@ const { pool } = require('../db');
 // GET /api/reports/daily?from=&to=
 router.get('/daily', auth, async (req, res, next) => {
   try {
-    const from = req.query.from || new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
-    const to = req.query.to || new Date().toISOString().split('T')[0];
+    const from = req.query.from || new Date(Date.now() - 6 * 86400000).toISOString().split('T')[0];
+    const to   = req.query.to   || new Date().toISOString().split('T')[0];
 
     const result = await pool.query(`
-      SELECT *
-      FROM daily_reports
-      WHERE report_date BETWEEN $1 AND $2
-      ORDER BY report_date DESC
+      WITH member_stats AS (
+        SELECT
+          DATE(entry_time)                                              AS report_date,
+          COUNT(*)                                                      AS total_sessions,
+          COUNT(*)                                                      AS member_sessions,
+          0                                                             AS guest_sessions_count,
+          COALESCE(SUM(fee), 0)                                        AS total_revenue,
+          COALESCE(SUM(fee), 0)                                        AS member_revenue,
+          0                                                             AS guest_revenue
+        FROM parking_sessions
+        WHERE DATE(entry_time) BETWEEN $1 AND $2
+          AND status IN ('completed', 'force_ended')
+        GROUP BY DATE(entry_time)
+      ),
+      guest_stats AS (
+        SELECT
+          DATE(entry_time)                                              AS report_date,
+          COUNT(*)                                                      AS total_sessions,
+          0                                                             AS member_sessions,
+          COUNT(*)                                                      AS guest_sessions_count,
+          COALESCE(SUM(fee), 0)                                        AS total_revenue,
+          0                                                             AS member_revenue,
+          COALESCE(SUM(fee), 0)                                        AS guest_revenue
+        FROM guest_sessions
+        WHERE DATE(entry_time) BETWEEN $1 AND $2
+          AND status IN ('completed', 'force_ended')
+        GROUP BY DATE(entry_time)
+      ),
+      combined AS (
+        SELECT * FROM member_stats
+        UNION ALL
+        SELECT * FROM guest_stats
+      ),
+      daily AS (
+        SELECT
+          report_date,
+          SUM(total_sessions)       AS total_sessions,
+          SUM(member_sessions)      AS member_sessions,
+          SUM(guest_sessions_count) AS guest_sessions_count,
+          SUM(total_revenue)        AS total_revenue,
+          SUM(member_revenue)       AS member_revenue,
+          SUM(guest_revenue)        AS guest_revenue
+        FROM combined
+        GROUP BY report_date
+      ),
+      auth AS (
+        SELECT
+          DATE(created_at)                                                          AS report_date,
+          COUNT(*) FILTER (WHERE event_type LIKE 'auth_success%')                  AS auth_success_count,
+          COUNT(*) FILTER (WHERE event_type LIKE 'auth_failed%')                   AS auth_failed_count
+        FROM event_logs
+        WHERE DATE(created_at) BETWEEN $1 AND $2
+        GROUP BY DATE(created_at)
+      )
+      SELECT
+        d.report_date,
+        d.total_sessions,
+        d.member_sessions,
+        d.guest_sessions_count,
+        d.total_revenue,
+        d.member_revenue,
+        d.guest_revenue,
+        COALESCE(a.auth_success_count, 0) AS auth_success_count,
+        COALESCE(a.auth_failed_count,  0) AS auth_failed_count
+      FROM daily d
+      LEFT JOIN auth a ON a.report_date = d.report_date
+      ORDER BY d.report_date
     `, [from, to]);
+
     res.json(result.rows);
   } catch (err) {
     next(err);

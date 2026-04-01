@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore'
-import { mockDailyReports, mockHourlyTraffic } from '../data/mockData'
+import { dashboardApi, reportsApi } from '../api/services'
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer,
@@ -27,24 +27,62 @@ const DeviceTypeLookup = {
 }
 
 export default function Dashboard() {
-  const { lot, devices, activeSessions, alerts, openBarrierManual, currentAdmin } = useStore()
+  const {
+    lot, devices, activeSessions, alerts,
+    dashboardStats,
+    openBarrierManual, currentAdmin,
+    fetchDashboardStats, fetchDevices, fetchActiveSessions, fetchAlerts,
+  } = useStore()
   const navigate = useNavigate()
   const [showBarrierModal, setShowBarrierModal] = useState(false)
   const [barrierForm, setBarrierForm] = useState({ lane: 'entry', reason: '' })
   const [tick, setTick] = useState(0)
+  const [dailyReports, setDailyReports] = useState([])
+  const [hourlyTraffic, setHourlyTraffic] = useState([])
 
-  // refresh durations every 30s
   useEffect(() => {
-    const t = setInterval(() => setTick(v => v + 1), 30000)
+    fetchDashboardStats()
+    fetchDevices()
+    fetchActiveSessions()
+    fetchAlerts()
+    loadCharts()
+    const t = setInterval(() => {
+      setTick(v => v + 1)
+      fetchDashboardStats()
+      fetchActiveSessions()
+    }, 30000)
     return () => clearInterval(t)
   }, [])
+
+  async function loadCharts() {
+    try {
+      const today = new Date()
+      const from = new Date(today - 6 * 86400000).toISOString().split('T')[0]
+      const to   = today.toISOString().split('T')[0]
+      const [daily, hourly] = await Promise.all([
+        reportsApi.daily(from, to),
+        dashboardApi.hourlyTraffic(),
+      ])
+      // Đảo ngược để ngày cũ → mới trên biểu đồ
+      const sorted = [...daily].sort((a, b) => a.report_date > b.report_date ? 1 : -1)
+      setDailyReports(sorted.map(r => ({
+        ...r,
+        date: new Date(r.report_date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
+      })))
+      setHourlyTraffic(hourly)
+    } catch {}
+  }
+
+  // Ưu tiên dùng stats API, fallback về store lot
+  const capacity  = dashboardStats?.capacity  ?? lot.total_capacity
+  const occupied  = dashboardStats?.occupied  ?? lot.current_occupancy
+  const todayRevenue  = dashboardStats?.todayRevenue  ?? 0
+  const todaySessions = dashboardStats?.todaySessions ?? 0
 
   const onlineCount  = devices.filter(d => d.status === 'online').length
   const offlineCount = devices.filter(d => d.status !== 'online').length
   const unresolved   = alerts.filter(a => !a.is_resolved).length
-  const todayRevenue = mockDailyReports.at(-1)?.total_revenue ?? 0
-  const todaySessions= mockDailyReports.at(-1)?.total_sessions ?? 0
-  const occupancyPct = Math.round(lot.current_occupancy * 100 / lot.total_capacity)
+  const occupancyPct = capacity > 0 ? Math.round(occupied * 100 / capacity) : 0
 
   const handleBarrierOpen = () => {
     if (!barrierForm.reason) return
@@ -61,14 +99,14 @@ export default function Dashboard() {
           icon={<ParkingSquare size={22} />}
           iconBg="bg-blue-100 text-blue-600"
           label="Tổng sức chứa"
-          value={lot.total_capacity}
+          value={capacity}
           sub="chỗ đỗ"
         />
         <StatCard
           icon={<Car size={22} />}
           iconBg="bg-amber-100 text-amber-600"
           label="Đang đỗ"
-          value={lot.current_occupancy}
+          value={occupied}
           sub={`${occupancyPct}% lấp đầy`}
           valueClass="text-amber-600"
         />
@@ -76,7 +114,7 @@ export default function Dashboard() {
           icon={<CheckCircle size={22} />}
           iconBg="bg-emerald-100 text-emerald-600"
           label="Còn trống"
-          value={lot.total_capacity - lot.current_occupancy}
+          value={capacity - occupied}
           sub="chỗ có sẵn"
           valueClass="text-emerald-600"
         />
@@ -108,9 +146,9 @@ export default function Dashboard() {
             </span>
           </div>
           <div className="flex items-center gap-4 mb-2">
-            <span className="text-3xl font-bold text-gray-900">{lot.current_occupancy}</span>
+            <span className="text-3xl font-bold text-gray-900">{occupied}</span>
             <span className="text-gray-400">/</span>
-            <span className="text-2xl text-gray-500">{lot.total_capacity}</span>
+            <span className="text-2xl text-gray-500">{capacity}</span>
             <span className="text-sm text-gray-500">xe đang đỗ</span>
           </div>
           <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
@@ -126,7 +164,7 @@ export default function Dashboard() {
           </div>
           <div className="flex justify-between text-xs text-gray-400 mt-1">
             <span>0</span>
-            <span>{lot.total_capacity}</span>
+            <span>{capacity}</span>
           </div>
         </div>
 
@@ -251,8 +289,11 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
           <h2 className="font-semibold text-gray-800 mb-4">Doanh thu 7 ngày gần nhất</h2>
+          {dailyReports.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-10">Chưa có dữ liệu báo cáo</p>
+          ) : (
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={mockDailyReports} margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
+            <BarChart data={dailyReports} margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="date" tick={{ fontSize: 11 }} />
               <YAxis tickFormatter={v => (v/1000) + 'k'} tick={{ fontSize: 11 }} />
@@ -260,19 +301,24 @@ export default function Dashboard() {
               <Bar dataKey="total_revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
+          )}
         </div>
 
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
           <h2 className="font-semibold text-gray-800 mb-4">Lưu lượng theo giờ – Hôm nay</h2>
+          {hourlyTraffic.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-10">Chưa có dữ liệu hôm nay</p>
+          ) : (
           <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={mockHourlyTraffic} margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
+            <LineChart data={hourlyTraffic} margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={2} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => [v + ' xe', 'Lượt vào']} />
-              <Line type="monotone" dataKey="count" stroke="#10b981" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="entries" stroke="#10b981" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
+          )}
         </div>
       </div>
 

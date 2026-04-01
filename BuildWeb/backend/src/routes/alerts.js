@@ -26,7 +26,7 @@ router.get('/', auth, async (req, res, next) => {
     const dataRes = await pool.query(`
       SELECT sa.alert_id AS id, sa.*, a.username AS resolved_by_username
       FROM system_alerts sa
-      LEFT JOIN admins a ON a.id = sa.resolved_by
+      LEFT JOIN admins a ON a.admin_id = sa.resolved_by
       ${where}
       ORDER BY
         CASE severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END,

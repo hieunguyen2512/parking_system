@@ -8,8 +8,8 @@ import Vehicles from './pages/Vehicles';
 import Sessions from './pages/Sessions';
 import Wallet from './pages/Wallet';
 import Authorizations from './pages/Authorizations';
-import Notifications from './pages/Notifications';
 import Profile from './pages/Profile';
+import MonthlyPasses from './pages/MonthlyPasses';
 
 function ProtectedRoute({ children }) {
   const isAuthenticated = useStore(s => s.isAuthenticated);
@@ -37,8 +37,8 @@ export default function App() {
           <Route path="sessions"       element={<Sessions />} />
           <Route path="wallet"         element={<Wallet />} />
           <Route path="authorizations" element={<Authorizations />} />
-          <Route path="notifications"  element={<Notifications />} />
           <Route path="profile"        element={<Profile />} />
+          <Route path="monthly-passes"  element={<MonthlyPasses />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

@@ -63,10 +63,18 @@ export const useStore = create((set, get) => ({
   dashboardStats: null,
 
   async fetchDashboardStats() {
-    if (!get().useApi) return
     try {
       const stats = await dashboardApi.stats()
-      set({ dashboardStats: stats })
+      set({
+        dashboardStats: stats,
+        lot: {
+          ...get().lot,
+          name: stats.lotName || get().lot.name,
+          address: stats.lotAddress || get().lot.address,
+          total_capacity: stats.capacity,
+          current_occupancy: stats.occupied,
+        },
+      })
     } catch {}
   },
 
@@ -74,7 +82,6 @@ export const useStore = create((set, get) => ({
   devices: mockDevices.map(d => ({ ...d })),
 
   async fetchDevices() {
-    if (!get().useApi) return
     try {
       const data = await devicesApi.list()
       set({ devices: data })
@@ -100,10 +107,9 @@ export const useStore = create((set, get) => ({
   activeSessions: mockActiveSessions.map(s => ({ ...s })),
 
   async fetchActiveSessions() {
-    if (!get().useApi) return
     try {
-      const res = await sessionsApi.list({ status: 'active', limit: 100 })
-      set({ activeSessions: res.data || [] })
+      const data = await dashboardApi.activeSessions()
+      set({ activeSessions: data || [] })
     } catch {}
   },
 
@@ -111,7 +117,6 @@ export const useStore = create((set, get) => ({
   alerts: mockAlerts.map(a => ({ ...a })),
 
   async fetchAlerts() {
-    if (!get().useApi) return
     try {
       const res = await alertsApi.list({ limit: 100 })
       set({ alerts: res.data })

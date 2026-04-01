@@ -62,6 +62,19 @@ app.use('/api/user/sessions', require('./routes/user/sessions'));
 app.use('/api/user/authorizations', require('./routes/user/authorizations'));
 app.use('/api/user/notifications', require('./routes/user/notifications'));
 app.use('/api/user/face-images',   require('./routes/user/faceImages'));
+app.use('/api/user/monthly-passes',require('./routes/user/monthlyPasses'));
+
+// Danh sách bãi đỗ xe (public cho user)
+const { pool } = require('./db');
+const userAuth  = require('./middleware/userAuth');
+app.get('/api/user/parking-lots', userAuth, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT lot_id, name, address, total_capacity FROM parking_lots WHERE is_active = true ORDER BY name'
+    );
+    res.json(rows);
+  } catch (e) { next(e); }
+});
 
 // Health check
 app.get('/api/health', (req, res) => {

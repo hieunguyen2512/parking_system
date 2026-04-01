@@ -105,4 +105,103 @@ router.post('/topup', userAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// POST /api/user/wallet/withdraw  – yêu cầu rút tiền
+router.post('/withdraw', userAuth, async (req, res, next) => {
+  try {
+    const { amount, bank_name, bank_account, account_name } = req.body;
+    const numAmount = parseFloat(amount);
+    if (!numAmount || numAmount < 10000) {
+      return res.status(400).json({ error: 'Số tiền rút tối thiểu 10,000 VND' });
+    }
+    if (numAmount > 50000000) {
+      return res.status(400).json({ error: 'Số tiền rút tối đa 50,000,000 VND mỗi lần' });
+    }
+    if (!bank_name?.trim() || !bank_account?.trim() || !account_name?.trim()) {
+      return res.status(400).json({ error: 'Thiếu thông tin ngân hàng (tên ngân hàng, số tài khoản, tên chủ tài khoản)' });
+    }
+
+    // Kiểm tra không có yêu cầu đang chờ
+    const pendingRes = await pool.query(
+      `SELECT 1 FROM withdraw_requests WHERE user_id = $1 AND status IN ('pending', 'processing')`,
+      [req.user.id]
+    );
+    if (pendingRes.rows.length > 0) {
+      return res.status(409).json({ error: 'Bạn đang có yêu cầu rút tiền chưa được xử lý' });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Kiểm tra và trừ ví (SELECT FOR UPDATE)
+      const walletRes = await client.query(
+        'SELECT wallet_id, balance FROM wallets WHERE user_id = $1 FOR UPDATE',
+        [req.user.id]
+      );
+      if (!walletRes.rows[0]) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Không tìm thấy ví' });
+      }
+      const wallet = walletRes.rows[0];
+      const balanceBefore = parseFloat(wallet.balance);
+      if (balanceBefore < numAmount) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          error: `Số dư không đủ. Hiện có ${balanceBefore.toLocaleString('vi-VN')}đ`
+        });
+      }
+      const newBalance = balanceBefore - numAmount;
+
+      await client.query(
+        'UPDATE wallets SET balance = $1, updated_at = NOW() WHERE wallet_id = $2',
+        [newBalance, wallet.wallet_id]
+      );
+
+      // Ghi giao dịch ví
+      const txRes = await client.query(
+        `INSERT INTO wallet_transactions
+           (wallet_id, user_id, transaction_type, amount, balance_before, balance_after, payment_gateway, status, description)
+         VALUES ($1, $2, 'withdraw', $3, $4, $5, 'bank_transfer', 'pending', 'Yêu cầu rút tiền – đang xử lý')
+         RETURNING transaction_id`,
+        [wallet.wallet_id, req.user.id, numAmount, balanceBefore, newBalance]
+      );
+
+      // Tạo yêu cầu rút tiền
+      const reqRes = await client.query(
+        `INSERT INTO withdraw_requests
+           (user_id, amount, bank_name, bank_account, account_name, wallet_tx_id, status)
+         VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+         RETURNING request_id, amount, bank_name, bank_account, account_name, status, created_at`,
+        [req.user.id, numAmount, bank_name.trim(), bank_account.trim(), account_name.trim(),
+          txRes.rows[0].transaction_id]
+      );
+
+      await client.query('COMMIT');
+      res.status(201).json({
+        message: 'Yêu cầu rút tiền đã được ghi nhận. Admin sẽ xử lý trong 1–3 ngày làm việc.',
+        request: reqRes.rows[0],
+        new_balance: newBalance,
+      });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) { next(err); }
+});
+
+// GET /api/user/wallet/withdrawals  – lịch sử yêu cầu rút tiền
+router.get('/withdrawals', userAuth, async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT request_id, amount, bank_name, bank_account, account_name,
+              status, admin_note, created_at, processed_at
+       FROM withdraw_requests WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20`,
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

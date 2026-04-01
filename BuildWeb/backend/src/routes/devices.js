@@ -8,13 +8,13 @@ router.get('/', auth, async (req, res, next) => {
     const result = await pool.query(`
       SELECT
         d.*,
-        dsl.created_at AS last_status_change
+        dsl.logged_at AS last_status_change
       FROM devices d
       LEFT JOIN LATERAL (
-        SELECT created_at FROM device_status_logs
-        WHERE device_id = d.id ORDER BY created_at DESC LIMIT 1
+        SELECT logged_at FROM device_status_logs
+        WHERE device_id = d.device_id ORDER BY logged_at DESC LIMIT 1
       ) dsl ON true
-      ORDER BY d.device_type, d.name
+      ORDER BY d.device_type, d.device_name
     `);
     res.json(result.rows);
   } catch (err) {

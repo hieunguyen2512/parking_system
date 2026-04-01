@@ -15,11 +15,14 @@ export default function Login() {
     e.preventDefault()
     setError('')
     setLoading(true)
-    await new Promise(r => setTimeout(r, 600))
-    const ok = login(form)
-    setLoading(false)
-    if (ok) navigate('/')
-    else setError('Tên đăng nhập hoặc mật khẩu không đúng')
+    try {
+      await login(form)
+      navigate('/')
+    } catch (err) {
+      setError(err.message || 'Tên đăng nhập hoặc mật khẩu không đúng')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -96,7 +99,7 @@ export default function Login() {
             </button>
 
             <div className="text-center text-xs text-gray-400 bg-gray-50 rounded-lg p-3">
-              Tài khoản demo: <strong className="text-gray-600">admin</strong> / <strong className="text-gray-600">admin123</strong>
+              Tài khoản demo: <strong className="text-gray-600">admin</strong> / <strong className="text-gray-600">Admin@123</strong>
             </div>
           </form>
         </div>

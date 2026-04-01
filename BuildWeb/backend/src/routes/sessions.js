@@ -117,6 +117,7 @@ router.patch('/:id/force-end', auth, async (req, res, next) => {
       UPDATE parking_sessions
       SET status = 'force_ended',
           exit_time = NOW(),
+          duration_minutes = GREATEST(0, EXTRACT(EPOCH FROM (NOW() - entry_time))::int / 60),
           force_ended_by = $1,
           force_end_reason = $2,
           updated_at = NOW()
@@ -125,11 +126,17 @@ router.patch('/:id/force-end', auth, async (req, res, next) => {
     `, [req.admin.id, reason.trim(), req.params.id]);
 
     if (memberResult.rows[0]) {
+      const session = memberResult.rows[0];
       await pool.query(`
-        INSERT INTO event_logs (event_type, session_id, admin_id, description)
-        VALUES ('SESSION_FORCE_ENDED', $1, $2, $3)
-      `, [req.params.id, req.admin.id, `Kết thúc cưỡng bức: ${reason.trim()}`]);
-      return res.json({ ...memberResult.rows[0], session_kind: 'member' });
+        UPDATE parking_lots
+        SET current_occupancy = GREATEST(0, current_occupancy - 1), updated_at = NOW()
+        WHERE lot_id = $1
+      `, [session.lot_id]);
+      await pool.query(`
+        INSERT INTO event_logs (event_type, session_id, admin_id, description, license_plate)
+        VALUES ('session_force_ended', $1, $2, $3, $4)
+      `, [req.params.id, req.admin.id, `Kết thúc cưỡng bức: ${reason.trim()}`, session.license_plate]);
+      return res.json({ ...session, session_kind: 'member' });
     }
 
     // Thử kết thúc phiên khách vãng lai
@@ -137,6 +144,7 @@ router.patch('/:id/force-end', auth, async (req, res, next) => {
       UPDATE guest_sessions
       SET status = 'abnormal',
           exit_time = NOW(),
+          duration_minutes = GREATEST(0, EXTRACT(EPOCH FROM (NOW() - entry_time))::int / 60),
           abnormal_reason = $1,
           updated_at = NOW()
       WHERE session_id = $2 AND status = 'active'
@@ -144,7 +152,17 @@ router.patch('/:id/force-end', auth, async (req, res, next) => {
     `, [reason.trim(), req.params.id]);
 
     if (guestResult.rows[0]) {
-      return res.json({ ...guestResult.rows[0], session_kind: 'guest' });
+      const gSession = guestResult.rows[0];
+      await pool.query(`
+        UPDATE parking_lots
+        SET current_occupancy = GREATEST(0, current_occupancy - 1), updated_at = NOW()
+        WHERE lot_id = $1
+      `, [gSession.lot_id]);
+      await pool.query(`
+        INSERT INTO event_logs (event_type, session_id, admin_id, description, license_plate)
+        VALUES ('session_force_ended', $1, $2, $3, $4)
+      `, [req.params.id, req.admin.id, `Kết thúc cưỡng bức (vãng lai): ${reason.trim()}`, gSession.license_plate]);
+      return res.json({ ...gSession, session_kind: 'guest' });
     }
 
     return res.status(404).json({ error: 'Không tìm thấy phiên đang hoạt động' });

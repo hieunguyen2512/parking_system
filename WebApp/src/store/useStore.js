@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import {
   authApi, vehiclesApi, walletApi,
-  sessionsApi, authorizationsApi, notificationsApi,
+  sessionsApi, authorizationsApi,
 } from '../api/services';
 
 export const useStore = create((set, get) => ({
@@ -28,7 +28,6 @@ export const useStore = create((set, get) => ({
     set({
       isAuthenticated: false, currentUser: null,
       wallet: null, vehicles: [], sessions: [], activeSessions: [],
-      notifications: [], unreadCount: 0,
     });
   },
 
@@ -41,10 +40,13 @@ export const useStore = create((set, get) => ({
         is_verified: data.is_verified,
       };
       localStorage.setItem('user_info', JSON.stringify(user));
-      set({
+      set(state => ({
         currentUser: user,
-        wallet: { balance: data.balance, low_balance_threshold: data.low_balance_threshold },
-      });
+        // Chỉ cập nhật balance từ me endpoint, giữ nguyên threshold từ fetchWallet
+        wallet: state.wallet
+          ? { ...state.wallet, balance: data.wallet_balance ?? state.wallet.balance }
+          : { balance: data.wallet_balance, low_balance_threshold: null },
+      }));
     } catch {}
   },
 
@@ -70,9 +72,15 @@ export const useStore = create((set, get) => ({
 
   async topup(amount, gateway) {
     const data = await walletApi.topup({ amount, payment_gateway: gateway });
-    set(state => ({
-      wallet: state.wallet ? { ...state.wallet, balance: data.new_balance } : null,
-    }));
+    // Refresh wallet từ server để đảm bảo balance và threshold đúng
+    try {
+      const fresh = await walletApi.info();
+      set({ wallet: fresh });
+    } catch {
+      set(state => ({
+        wallet: state.wallet ? { ...state.wallet, balance: data.new_balance } : null,
+      }));
+    }
     return data;
   },
 
@@ -145,35 +153,4 @@ export const useStore = create((set, get) => ({
     }));
   },
 
-  // ── Notifications ───────────────────────────────────────────
-  notifications: [],
-  unreadCount: 0,
-  notifPage: 1,
-
-  async fetchNotifications(page = 1) {
-    try {
-      const data = await notificationsApi.list(page, 20);
-      set({ notifications: data.notifications, unreadCount: data.unread_count, notifPage: page });
-    } catch {}
-  },
-
-  async markNotificationRead(id) {
-    try {
-      await notificationsApi.markRead(id);
-      set(state => ({
-        notifications: state.notifications.map(n => n.id === id ? { ...n, is_read: true } : n),
-        unreadCount: Math.max(0, state.unreadCount - 1),
-      }));
-    } catch {}
-  },
-
-  async markAllRead() {
-    try {
-      await notificationsApi.readAll();
-      set(state => ({
-        notifications: state.notifications.map(n => ({ ...n, is_read: true })),
-        unreadCount: 0,
-      }));
-    } catch {}
-  },
 }));

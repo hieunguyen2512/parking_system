@@ -27,7 +27,11 @@ export default function Dashboard() {
     fetchVehicles();
   }, []);
 
-  const isLowBalance = wallet && wallet.balance < wallet.low_balance_threshold;
+  const threshold = wallet?.low_balance_threshold;
+  const isLowBalance = wallet != null
+    && typeof wallet.balance === 'number'
+    && typeof threshold === 'number' && threshold > 0
+    && wallet.balance < threshold;
 
   return (
     <div className="p-4 space-y-4">

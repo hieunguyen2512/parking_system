@@ -48,3 +48,15 @@ export const faceImagesApi = {
   upload: (imageData) => api.post('/face-images', { image_data: imageData }),
   remove: (id)        => api.delete(`/face-images/${id}`),
 };
+
+export const monthlyPassesApi = {
+  list:    ()          => api.get('/monthly-passes'),
+  price:   ()          => api.get('/monthly-passes/price'),
+  buy:     (data)      => api.post('/monthly-passes', data),
+  cancel:  (id)        => api.delete(`/monthly-passes/${id}`),
+};
+
+export const withdrawApi = {
+  history: ()     => api.get('/wallet/withdrawals'),
+  request: (data) => api.post('/wallet/withdraw', data),
+};
