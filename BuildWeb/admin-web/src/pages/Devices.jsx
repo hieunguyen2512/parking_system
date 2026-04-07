@@ -2,7 +2,7 @@
 import {
   Camera, WifiOff, Maximize2, Minimize2,
   CheckCircle2, XCircle, ShieldCheck, ShieldX, Loader2, Wifi, Activity,
-  Cpu, Server, Radio, HardDrive, Clock, Lock, Unlock,
+  Cpu, Server, Radio, HardDrive, Clock, Lock, Unlock, Settings, Save,
 } from "lucide-react"
 import { devicesApi } from "../api/services"
 
@@ -76,6 +76,117 @@ function DeviceListPanel({ lane, devices, loading }) {
           </div>
         ))
       }
+    </div>
+  )
+}
+
+// ══ Camera Assignment Panel ══════════════════════════════════════════════════
+function CamAssignPanel({ assignment, onSaved }) {
+  const [open,    setOpen]    = useState(false)
+  const [draft,   setDraft]   = useState(assignment)
+  const [cameras, setCameras] = useState([])   // [{index, width, height}]
+  const [saving,  setSaving]  = useState(false)
+  const [msg,     setMsg]     = useState(null)  // {ok, text}
+
+  // Sync draft khi assignment bên ngoài thay đổi
+  useEffect(() => { setDraft(assignment) }, [assignment])
+
+  // Tải danh sách camera khi mở panel
+  useEffect(() => {
+    if (!open) return
+    fetch(`${AI_URL}/cameras`, { signal: AbortSignal.timeout(3000) })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.cameras) setCameras(d.cameras) })
+      .catch(() => {})
+  }, [open])
+
+  async function save() {
+    setSaving(true); setMsg(null)
+    try {
+      const r = await fetch(`${AI_URL}/cameras/assignment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(draft),
+        signal: AbortSignal.timeout(4000),
+      })
+      const d = await r.json()
+      if (r.ok && d.ok) {
+        setMsg({ ok: true, text: "Đã lưu – stream sẽ cập nhật ngay" })
+        onSaved(draft)
+        setTimeout(() => setOpen(false), 1200)
+      } else {
+        setMsg({ ok: false, text: d.detail || "Lưu thất bại" })
+      }
+    } catch (e) {
+      setMsg({ ok: false, text: "Không kết nối được AI service" })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const ROLES = [
+    { key: "entry_plate", label: "Vào – Biển số",   accent: "blue"   },
+    { key: "entry_face",  label: "Vào – Khuôn mặt", accent: "violet" },
+    { key: "exit_plate",  label: "Ra  – Biển số",   accent: "amber"  },
+    { key: "exit_face",   label: "Ra  – Khuôn mặt", accent: "rose"   },
+  ]
+  const accentText = { blue: "text-blue-600", violet: "text-violet-600", amber: "text-amber-600", rose: "text-rose-600" }
+  const camLabel = idx => {
+    const c = cameras.find(x => x.index === idx)
+    return c ? `cam ${idx}  (${c.width}×${c.height})` : `cam ${idx}`
+  }
+  // Tất cả index có thể chọn = union(camera phát hiện, 0..5)
+  const allIndices = [...new Set([...cameras.map(c => c.index), 0, 1, 2, 3, 4, 5])].sort((a, b) => a - b)
+
+  return (
+    <div className="shrink-0">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium
+          border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors">
+        <Settings size={13} />
+        Phân công camera
+        {open
+          ? <XCircle size={12} className="text-slate-400" />
+          : <span className="text-[10px] text-slate-400">▾</span>}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 mt-2 z-30 bg-white border border-slate-200 rounded-2xl shadow-xl p-4 w-80">
+          <div className="text-xs font-semibold text-slate-700 mb-3 flex items-center gap-1.5">
+            <Camera size={13} /> Gán index camera cho từng vai trò
+          </div>
+          <div className="flex flex-col gap-2.5">
+            {ROLES.map(({ key, label, accent }) => (
+              <div key={key} className="flex items-center justify-between gap-2">
+                <span className={`text-[11px] font-medium ${accentText[accent]} w-32 shrink-0`}>{label}</span>
+                <select
+                  value={draft[key]}
+                  onChange={e => setDraft(p => ({ ...p, [key]: Number(e.target.value) }))}
+                  className="flex-1 text-xs border border-slate-200 rounded-lg px-2 py-1 bg-slate-50
+                    focus:outline-none focus:ring-2 focus:ring-blue-400">
+                  {allIndices.map(i => (
+                    <option key={i} value={i}>{camLabel(i)}</option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+          {msg && (
+            <p className={`mt-2.5 text-[11px] text-center font-medium
+              ${msg.ok ? "text-emerald-600" : "text-rose-600"}`}>
+              {msg.text}
+            </p>
+          )}
+          <button
+            onClick={save} disabled={saving}
+            className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold
+              bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-60">
+            {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+            {saving ? "Đang lưu…" : "Lưu & áp dụng"}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -441,6 +552,9 @@ export default function Devices() {
           </div>
           <div className={`flex items-center gap-1.5 text-xs ${bridgeConn ? "text-emerald-600" : "text-slate-400"}`}>
             <Wifi size={13} /> Bridge {bridgeConn ? "kết nối" : "offline"}
+          </div>
+          <div className="relative">
+            <CamAssignPanel assignment={assignment} onSaved={setAssignment} />
           </div>
         </div>
       </div>
