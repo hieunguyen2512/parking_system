@@ -24,6 +24,10 @@ EXIT_FACE_CAM    = int(os.getenv("EXIT_FACE_CAM",   "3"))  # Cam cổng ra  - qu
 
 CAMERA_WIDTH  = int(os.getenv("CAMERA_WIDTH",  "1280"))
 CAMERA_HEIGHT = int(os.getenv("CAMERA_HEIGHT", "720"))
+# FPS hardware capture – giảm xuống 15 để tiết kiệm USB bandwidth (4 cam đồng thời)
+CAMERA_FPS     = int(os.getenv("CAMERA_FPS",    "15"))
+# Giây chờ trước warm_cameras – để Windows khởi tạo xong driver camera
+CAMERA_STARTUP_DELAY = float(os.getenv("CAMERA_STARTUP_DELAY", "3.0"))
 
 # LAZY  = mở-chụp-đóng mỗi lần trigger (khuyến nghị khi dùng chung USB hub)
 # KEEP  = giữ camera mở liên tục (nhanh hơn, dùng khi mỗi camera có port riêng)

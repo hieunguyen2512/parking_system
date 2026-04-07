@@ -60,13 +60,14 @@ class CameraManager:
     # ── Internal open với retry ──────────────────────────────────────────
     def _open_cap(self, cam_index: int) -> cv2.VideoCapture:
         """Mở camera và đặt độ phân giải.
-        Giảm xuống 2 lần thử (thay vì 5) để fail nhanh hơn khi camera bị hỏng.
+        Dùng DSHOW trước (ổn định hơn MSMF khi stream đa camera liên tục),
+        fallback sang MSMF nếu DSHOW không hỗ trợ camera cụ thể.
         """
         delays = [0, 0.5]
         for wait in delays:
             if wait:
                 time.sleep(wait)
-            for backend, name in [(cv2.CAP_MSMF, "MSMF"), (cv2.CAP_DSHOW, "DSHOW")]:
+            for backend, name in [(cv2.CAP_DSHOW, "DSHOW"), (cv2.CAP_MSMF, "MSMF")]:
                 cap = self._try_open_cap(cam_index, backend, timeout=3.0)
                 if cap is None or not cap.isOpened():
                     if cap is not None:
@@ -83,7 +84,7 @@ class CameraManager:
                     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config.CAMERA_HEIGHT)
                 # else: dùng native resolution (vd 640x480)
                 cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                cap.set(cv2.CAP_PROP_FPS, 30)       # yêu cầu 30fps để tránh MSMF chọn FPS thấp
+                cap.set(cv2.CAP_PROP_FPS, getattr(config, "CAMERA_FPS", 15))
                 final_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                 final_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                 logger.info(f"Camera {cam_index} mo OK [{name}] "
@@ -329,19 +330,19 @@ class CameraManager:
                     except Exception as e:
                         logger.warning(f"stream_frame init cam{cam_index}: {e}")
                         return None
+        # _init_lock đã release – đọc frame đầu tiên NGOÀI lock để không chặn cam khác
 
-            # Đọc frame đầu tiên từ camera vừa mở
-            with cam_lock:
-                cap = self._cameras.get(cam_index)
-                if cap and cap.isOpened():
-                    try:
-                        ret, frame = cap.read()
-                        if ret and frame is not None:
-                            _, buf = cv2.imencode(".jpg", frame,
-                                                 [cv2.IMWRITE_JPEG_QUALITY, 80])
-                            return buf.tobytes()
-                    except Exception as e:
-                        logger.warning(f"stream_frame first-read cam{cam_index}: {e}")
+        with cam_lock:
+            cap = self._cameras.get(cam_index)
+            if cap and cap.isOpened():
+                try:
+                    ret, frame = cap.read()
+                    if ret and frame is not None:
+                        _, buf = cv2.imencode(".jpg", frame,
+                                             [cv2.IMWRITE_JPEG_QUALITY, 80])
+                        return buf.tobytes()
+                except Exception as e:
+                    logger.warning(f"stream_frame first-read cam{cam_index}: {e}")
         return None
 
     def release_all(self):

@@ -203,6 +203,8 @@ def _mjpeg_generator(cam_index: int):
     tránh xung đột 2 handle trên cùng 1 camera vật lý trên Windows.
     """
     boundary = b"--frame"
+    # Stagger theo cam_index (25ms/cam) – tránh 4 cam đọc USB cùng lúc
+    time.sleep(cam_index * 0.025)
     try:
         while True:
             data = camera.stream_frame(cam_index)
@@ -212,7 +214,7 @@ def _mjpeg_generator(cam_index: int):
                     b"Content-Type: image/jpeg\r\n\r\n"
                     + data + b"\r\n"
                 )
-                time.sleep(0.033)  # ~30 fps
+                time.sleep(1.0 / getattr(config, "CAMERA_FPS", 15))  # dynamic FPS
             else:
                 time.sleep(0.1)
     except GeneratorExit:
@@ -457,6 +459,11 @@ async def startup():
     from modules.camera_manager import CAPTURE_MODE as _CAP_MODE
 
     if _CAP_MODE == "KEEP":
+        # KEEP mode: chờ Windows khởi tạo xong driver camera trước khi warm
+        startup_delay = getattr(config, "CAMERA_STARTUP_DELAY", 3.0)
+        logger.info(f"Chờ {startup_delay}s cho Windows khởi tạo camera driver...")
+        await asyncio.sleep(startup_delay)
+
         # KEEP mode: pre-warm và giữ camera mở liên tục (mỗi cam cần port USB riêng)
         await loop.run_in_executor(_executor, camera.warm_cameras, cam_indices)
 
