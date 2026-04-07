@@ -29,7 +29,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 import config
-from modules.camera_manager  import CameraManager
+from modules.camera_manager  import CameraManager, get_placeholder_jpeg
 from modules.plate_recognizer import PlateRecognizer
 from modules.face_recognizer  import FaceRecognizer
 
@@ -201,6 +201,9 @@ def _mjpeg_generator(cam_index: int):
     """Generator liên tục yield MJPEG frames từ camera.
     Dùng KEEP-pool của camera_manager – không mở VideoCapture riêng,
     tránh xung đột 2 handle trên cùng 1 camera vật lý trên Windows.
+
+    Khi camera chưa sẵn sàng, yield placeholder JPEG đen để browser
+    KHÔNG bao giờ cắt kết nối – khi camera mở được sẽ tự hiển thị video thật.
     """
     boundary = b"--frame"
     # Stagger theo cam_index (25ms/cam) – tránh 4 cam đọc USB cùng lúc
@@ -209,14 +212,18 @@ def _mjpeg_generator(cam_index: int):
         while True:
             data = camera.stream_frame(cam_index)
             if data:
-                yield (
-                    boundary + b"\r\n"
-                    b"Content-Type: image/jpeg\r\n\r\n"
-                    + data + b"\r\n"
-                )
-                time.sleep(1.0 / getattr(config, "CAMERA_FPS", 15))  # dynamic FPS
+                fps_delay = 1.0 / getattr(config, "CAMERA_FPS", 15)
             else:
-                time.sleep(0.1)
+                # Camera chưa sẵn sàng – dùng placeholder JPEG đen để giữ
+                # kết nối MJPEG (Chrome/Firefox sẽ cắt stream nếu không có data)
+                data = get_placeholder_jpeg()
+                fps_delay = 0.5   # gửi chậm hơn khi chờ camera mở
+            yield (
+                boundary + b"\r\n"
+                b"Content-Type: image/jpeg\r\n\r\n"
+                + data + b"\r\n"
+            )
+            time.sleep(fps_delay)
     except GeneratorExit:
         pass
 
