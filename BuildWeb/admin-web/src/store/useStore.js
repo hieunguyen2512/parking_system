@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { io } from 'socket.io-client'
 import { authApi, dashboardApi, sessionsApi, devicesApi, alertsApi, configApi, barriersApi } from '../api/services'
 import {
   mockAlerts, mockDevices, mockActiveSessions,
@@ -205,5 +206,36 @@ export const useStore = create((set, get) => ({
     }
     const entry = { id: Date.now(), lane: deviceId, reason, admin_name: adminName, executed_at: new Date() }
     set(s => ({ barrierLogs: [entry, ...s.barrierLogs] }))
+  },
+
+  // ── Live Events (Socket.IO từ backend) ────────────────────────────
+  liveEvents: [],
+  socketConnected: false,
+  _socket: null,
+
+  initSocket() {
+    if (get()._socket) return
+    const BACKEND = (import.meta.env.VITE_API_URL || 'http://localhost:4000/api').replace('/api', '')
+    const socket = io(BACKEND, { transports: ['websocket'], reconnectionDelay: 3000 })
+
+    socket.on('connect',    () => set({ socketConnected: true }))
+    socket.on('disconnect', () => set({ socketConnected: false }))
+
+    socket.on('vehicle:entry', (data) => {
+      const ev = { id: Date.now(), type: 'vehicle:entry', data, ts: new Date() }
+      set(s => ({ liveEvents: [ev, ...s.liveEvents].slice(0, 100) }))
+      // Refresh dashboard stats + active sessions
+      get().fetchDashboardStats()
+      get().fetchActiveSessions()
+    })
+
+    socket.on('vehicle:exit', (data) => {
+      const ev = { id: Date.now(), type: 'vehicle:exit', data, ts: new Date() }
+      set(s => ({ liveEvents: [ev, ...s.liveEvents].slice(0, 100) }))
+      get().fetchDashboardStats()
+      get().fetchActiveSessions()
+    })
+
+    set({ _socket: socket })
   },
 }))

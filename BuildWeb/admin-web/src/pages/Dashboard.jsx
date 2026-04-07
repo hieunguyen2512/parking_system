@@ -11,6 +11,7 @@ import {
   Cpu, AlertTriangle, ChevronRight, DoorOpen, DoorClosed,
 } from 'lucide-react'
 import clsx from 'clsx'
+import HardwareMonitor from '../components/HardwareMonitor'
 
 const fmtVND = n => n?.toLocaleString('vi-VN') + 'đ'
 const fmtDuration = (entry) => {
@@ -283,6 +284,11 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* ── Hardware Monitor ─────────────────────────────── */}
+      <div className="bg-gray-800 rounded-xl border border-gray-700 p-5">
+        <HardwareMonitor />
       </div>
 
       {/* ── Charts ──────────────────────────────────────── */}

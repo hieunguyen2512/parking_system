@@ -1,20 +1,23 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Car, Users, Cpu, FileText,
-  BarChart2, AlertTriangle, Settings, LogOut, ParkingSquare,
+  BarChart2, AlertTriangle, Settings, LogOut, ParkingSquare, Link2,
 } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import clsx from 'clsx'
 
-const navItems = [
+const mainNavItems = [
   { to: '/',        icon: LayoutDashboard, label: 'Tổng quan',        exact: true },
   { to: '/sessions',icon: Car,             label: 'Phiên gửi xe' },
   { to: '/users',   icon: Users,           label: 'Người dùng' },
-  { to: '/devices', icon: Cpu,             label: 'Thiết bị' },
   { to: '/events',  icon: FileText,        label: 'Nhật ký sự kiện' },
   { to: '/reports', icon: BarChart2,       label: 'Báo cáo' },
   { to: '/alerts',  icon: AlertTriangle,   label: 'Cảnh báo' },
   { to: '/config',  icon: Settings,        label: 'Cấu hình' },
+]
+
+const connectNavItems = [
+  { to: '/devices', icon: Cpu, label: 'Thiết bị' },
 ]
 
 export default function Sidebar() {
@@ -38,30 +41,62 @@ export default function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {navItems.map(({ to, icon: Icon, label, exact }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={exact}
-            className={({ isActive }) =>
-              clsx(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors relative',
-                isActive
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              )
-            }
-          >
-            <Icon size={18} />
-            <span>{label}</span>
-            {label === 'Cảnh báo' && unresolvedCount > 0 && (
-              <span className="ml-auto bg-rose-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                {unresolvedCount}
-              </span>
-            )}
-          </NavLink>
-        ))}
+      <nav className="flex-1 px-3 py-4 overflow-y-auto">
+        {/* Main items */}
+        <div className="space-y-0.5">
+          {mainNavItems.map(({ to, icon: Icon, label, exact }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={exact}
+              className={({ isActive }) =>
+                clsx(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors relative',
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                )
+              }
+            >
+              <Icon size={18} />
+              <span>{label}</span>
+              {label === 'Cảnh báo' && unresolvedCount > 0 && (
+                <span className="ml-auto bg-rose-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                  {unresolvedCount}
+                </span>
+              )}
+            </NavLink>
+          ))}
+        </div>
+
+        {/* Kết nối section */}
+        <div className="mt-5">
+          <div className="flex items-center gap-2 px-3 mb-1.5">
+            <Link2 size={13} className="text-slate-500" />
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">
+              Kết nối
+            </span>
+          </div>
+          <div className="space-y-0.5">
+            {connectNavItems.map(({ to, icon: Icon, label }) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  clsx(
+                    'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                  )
+                }
+              >
+                <Icon size={18} />
+                <span>{label}</span>
+              </NavLink>
+            ))}
+          </div>
+        </div>
       </nav>
 
       {/* Admin info + logout */}

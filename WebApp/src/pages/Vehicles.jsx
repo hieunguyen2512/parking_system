@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
-import { Car, Plus, Pencil, Trash2, X, Check } from 'lucide-react';
+import { vehiclesApi } from '../api/services';
+import { Car, Plus, Pencil, Trash2, X, Check, Camera, ImageIcon } from 'lucide-react';
 
 export default function Vehicles() {
   const { vehicles, fetchVehicles, addVehicle, updateVehicle, removeVehicle } = useStore();
@@ -10,6 +11,13 @@ export default function Vehicles() {
   const [editNickname, setEditNickname] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Ảnh biển số
+  const [plateUploading, setPlateUploading] = useState(null); // vehicle id đang upload
+  const [plateError, setPlateError]         = useState('');
+  const [previewImg, setPreviewImg]         = useState(null);
+  const fileInputRef = useRef(null);
+  const uploadingForId = useRef(null);
 
   useEffect(() => { fetchVehicles(); }, []);
 
@@ -40,10 +48,68 @@ export default function Vehicles() {
     catch (err) { alert(err.message); }
   }
 
+  function triggerPlateUpload(vehicleId) {
+    uploadingForId.current = vehicleId;
+    fileInputRef.current?.click();
+  }
+
+  async function handlePlateFileChange(e) {
+    const file = e.target.files?.[0];
+    fileInputRef.current.value = '';
+    if (!file) return;
+
+    const vehicleId = uploadingForId.current;
+    if (!vehicleId) return;
+
+    setPlateError('');
+    if (!file.type.startsWith('image/')) { setPlateError('Chỉ chấp nhận file ảnh (JPEG, PNG, WEBP)'); return; }
+    if (file.size > 5 * 1024 * 1024)    { setPlateError('Ảnh quá lớn. Tối đa 5MB'); return; }
+
+    setPlateUploading(vehicleId);
+    try {
+      const imageData = await readFileAsBase64(file);
+      await vehiclesApi.uploadPlateImage(vehicleId, imageData);
+      await fetchVehicles();
+    } catch (err) {
+      setPlateError(err.message);
+    } finally {
+      setPlateUploading(null);
+    }
+  }
+
+  async function handleRemovePlateImage(vehicleId) {
+    if (!confirm('Xóa ảnh biển số này?')) return;
+    setPlateError('');
+    try {
+      await vehiclesApi.removePlateImage(vehicleId);
+      await fetchVehicles();
+    } catch (err) {
+      setPlateError(err.message);
+    }
+  }
+
+  function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload  = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('Không thể đọc file'));
+      reader.readAsDataURL(file);
+    });
+  }
+
   const activeVehicles = vehicles.filter(v => v.is_active);
 
   return (
     <div className="p-4 space-y-4">
+      {/* Input file ẩn dùng chung */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={handlePlateFileChange}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-500">{activeVehicles.length} xe đã đăng ký</p>
@@ -54,6 +120,14 @@ export default function Vehicles() {
           <Plus size={16} /> Thêm xe
         </button>
       </div>
+
+      {/* Lỗi ảnh biển số */}
+      {plateError && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm flex items-center justify-between">
+          {plateError}
+          <button onClick={() => setPlateError('')}><X size={14} /></button>
+        </div>
+      )}
 
       {/* Form thêm xe */}
       {showAdd && (
@@ -100,7 +174,8 @@ export default function Vehicles() {
       ) : (
         <div className="space-y-3">
           {activeVehicles.map(v => (
-            <div key={v.id} className="card">
+            <div key={v.id} className="card space-y-3">
+              {/* Thông tin xe + nút */}
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
                   <Car size={20} className="text-blue-600" />
@@ -144,8 +219,68 @@ export default function Vehicles() {
                   </div>
                 )}
               </div>
+
+              {/* Ảnh biển số */}
+              <div className="border-t border-slate-100 pt-3">
+                <p className="text-xs font-medium text-slate-500 mb-2 flex items-center gap-1">
+                  <ImageIcon size={12} /> Ảnh biển số xe
+                </p>
+                {v.plate_image_path ? (
+                  <div className="flex items-start gap-2">
+                    <div
+                      className="relative rounded-xl overflow-hidden bg-slate-100 cursor-pointer"
+                      style={{ width: 140, height: 70 }}
+                      onClick={() => setPreviewImg(`/uploads/${v.plate_image_path}`)}
+                    >
+                      <img
+                        src={`/uploads/${v.plate_image_path}`}
+                        alt="biển số"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <button
+                        onClick={() => triggerPlateUpload(v.id)}
+                        disabled={plateUploading === v.id}
+                        className="flex items-center gap-1 text-xs text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-lg border border-blue-200"
+                      >
+                        <Camera size={12} />
+                        {plateUploading === v.id ? 'Đang tải...' : 'Đổi ảnh'}
+                      </button>
+                      <button
+                        onClick={() => handleRemovePlateImage(v.id)}
+                        className="flex items-center gap-1 text-xs text-red-500 hover:bg-red-50 px-2 py-1 rounded-lg border border-red-200"
+                      >
+                        <Trash2 size={12} /> Xóa ảnh
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => triggerPlateUpload(v.id)}
+                    disabled={plateUploading === v.id}
+                    className="w-full flex items-center justify-center gap-2 py-2 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 text-sm hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-60 transition-colors"
+                  >
+                    <Camera size={15} />
+                    {plateUploading === v.id ? 'Đang tải lên...' : 'Thêm ảnh biển số'}
+                  </button>
+                )}
+              </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Preview ảnh full màn hình */}
+      {previewImg && (
+        <div
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          onClick={() => setPreviewImg(null)}
+        >
+          <button className="absolute top-4 right-4 text-white" onClick={() => setPreviewImg(null)}>
+            <X size={28} />
+          </button>
+          <img src={previewImg} alt="preview" className="max-w-full max-h-full rounded-xl object-contain" />
         </div>
       )}
     </div>

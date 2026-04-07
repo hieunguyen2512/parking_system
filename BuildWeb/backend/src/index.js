@@ -1,9 +1,11 @@
 require('dotenv').config();
-const path    = require('path');
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
+const path       = require('path');
+const http       = require('http');
+const express    = require('express');
+const cors       = require('cors');
+const helmet     = require('helmet');
+const rateLimit  = require('express-rate-limit');
+const { Server } = require('socket.io');
 const { testConnection } = require('./db');
 const errorHandler = require('./middleware/errorHandler');
 
@@ -17,8 +19,8 @@ const allowedOrigins = [
 ];
 app.use(cors({
   origin: (origin, callback) => {
-    // Cho phép tất cả localhost (mọi port) khi dev
-    if (!origin || allowedOrigins.includes(origin) ||
+    // Cho phép tất cả localhost (mọi port) khi dev + file:// (origin = "null")
+    if (!origin || origin === 'null' || allowedOrigins.includes(origin) ||
         /^http:\/\/localhost:\d+$/.test(origin)) {
       return callback(null, true);
     }
@@ -51,7 +53,8 @@ app.use('/api/event-logs', require('./routes/eventLogs'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/alerts', require('./routes/alerts'));
 app.use('/api/config', require('./routes/config'));
-app.use('/api/barriers', require('./routes/barriers'));
+app.use('/api/barriers',  require('./routes/barriers'));
+app.use('/api/hardware',  require('./routes/hardware'));
 
 // Routes – User Web App
 app.use('/api/user/auth/login', loginLimiter);
@@ -89,8 +92,31 @@ app.use((req, res) => {
 // Error handler
 app.use(errorHandler);
 
+// ── Socket.IO setup ─────────────────────────────────────────────────────────
+const httpServer = http.createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: [
+      process.env.CORS_ORIGIN      || 'http://localhost:3000',
+      process.env.CORS_USER_ORIGIN || 'http://localhost:5175',
+      /^http:\/\/localhost:\d+$/,
+    ],
+    methods: ['GET', 'POST'],
+  },
+});
+
+io.on('connection', (socket) => {
+  console.log('[Socket.IO] Admin Web kết nối:', socket.id);
+  socket.on('disconnect', () => {
+    console.log('[Socket.IO] Ngắt kết nối:', socket.id);
+  });
+});
+
+// Cho phép các route truy cập io
+app.set('io', io);
+
 const PORT = parseInt(process.env.PORT) || 4000;
-app.listen(PORT, async () => {
+httpServer.listen(PORT, async () => {
   console.log(`\n🚀 Backend API đang chạy tại http://localhost:${PORT}`);
   console.log(`   Admin web (CORS): ${process.env.CORS_ORIGIN || 'http://localhost:3000'}`);
   console.log(`   User web  (CORS): ${process.env.CORS_USER_ORIGIN || 'http://localhost:5175'}`);

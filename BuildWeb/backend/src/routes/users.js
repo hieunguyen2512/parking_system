@@ -52,7 +52,7 @@ router.get('/:id', auth, async (req, res, next) => {
         FROM users u LEFT JOIN wallets w ON w.user_id = u.user_id
         WHERE u.user_id = $1
       `, [uid]),
-      pool.query(`SELECT vehicle_id AS id, license_plate, nickname, is_active, created_at FROM vehicles WHERE user_id = $1 ORDER BY created_at DESC`, [uid]),
+      pool.query(`SELECT vehicle_id AS id, license_plate, nickname, plate_image_path, is_active, created_at FROM vehicles WHERE user_id = $1 ORDER BY created_at DESC`, [uid]),
       pool.query(`
         SELECT session_id AS id, entry_time, exit_time, license_plate, status, fee AS fee_charged
         FROM parking_sessions WHERE user_id = $1

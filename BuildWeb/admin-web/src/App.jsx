@@ -18,10 +18,12 @@ function Protected({ children }) {
 }
 
 export default function App() {
-  const initApi = useStore(s => s.initApi)
+  const initApi    = useStore(s => s.initApi)
+  const initSocket = useStore(s => s.initSocket)
 
   useEffect(() => {
     initApi()
+    initSocket()
   }, [])
 
   return (

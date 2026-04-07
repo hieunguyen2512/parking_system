@@ -14,6 +14,8 @@ export const vehiclesApi = {
   add:    (data)     => api.post('/vehicles', data),
   update: (id, data) => api.put(`/vehicles/${id}`, data),
   remove: (id)       => api.delete(`/vehicles/${id}`),
+  uploadPlateImage: (id, imageData) => api.post(`/vehicles/${id}/plate-image`, { image_data: imageData }),
+  removePlateImage: (id)            => api.delete(`/vehicles/${id}/plate-image`),
 };
 
 export const walletApi = {

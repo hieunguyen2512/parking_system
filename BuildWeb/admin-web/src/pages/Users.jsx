@@ -6,8 +6,6 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 
-const BACKEND = 'http://localhost:4000'
-
 const fmtVND  = n => (n ?? 0).toLocaleString('vi-VN') + 'đ'
 const fmtDate = d => new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 const fmtTime = d => new Date(d).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
@@ -341,18 +339,35 @@ export default function Users() {
               {detailTab === 'vehicles' && (
                 <div className="space-y-2">
                   {(detail.vehicles ?? []).map(v => (
-                    <div key={v.id} className="flex items-center gap-4 bg-gray-50 rounded-lg p-3">
-                      <Car size={18} className="text-blue-500 shrink-0" />
-                      <div className="flex-1">
-                        <div className="font-mono font-bold text-gray-800">{v.license_plate}</div>
-                        <div className="text-xs text-gray-500">{v.nickname || '—'}</div>
+                    <div key={v.id} className="bg-gray-50 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center gap-4">
+                        <Car size={18} className="text-blue-500 shrink-0" />
+                        <div className="flex-1">
+                          <div className="font-mono font-bold text-gray-800">{v.license_plate}</div>
+                          <div className="text-xs text-gray-500">{v.nickname || '—'}</div>
+                        </div>
+                        <span className={clsx(
+                          'text-xs px-2 py-0.5 rounded-full font-medium',
+                          v.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-500'
+                        )}>
+                          {v.is_active ? 'Hoạt động' : 'Vô hiệu'}
+                        </span>
                       </div>
-                      <span className={clsx(
-                        'text-xs px-2 py-0.5 rounded-full font-medium',
-                        v.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-500'
-                      )}>
-                        {v.is_active ? 'Hoạt động' : 'Vô hiệu'}
-                      </span>
+                      {v.plate_image_path ? (
+                        <div
+                          className="rounded-lg overflow-hidden bg-gray-200 cursor-pointer"
+                          style={{ height: 72 }}
+                          onClick={() => setPreviewImg(`/uploads/${v.plate_image_path}`)}
+                        >
+                          <img
+                            src={`/uploads/${v.plate_image_path}`}
+                            alt="biển số"
+                            className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400 italic">Chưa có ảnh biển số</p>
+                      )}
                     </div>
                   ))}
                   {(detail.vehicles ?? []).length === 0 && (
@@ -432,10 +447,10 @@ export default function Users() {
                           <div
                             key={img.image_id}
                             className="relative rounded-xl overflow-hidden bg-gray-100 aspect-square cursor-pointer group"
-                            onClick={() => setPreviewImg(`${BACKEND}/uploads/${img.image_path}`)}
+                            onClick={() => setPreviewImg(`/uploads/${img.image_path}`)}
                           >
                             <img
-                              src={`${BACKEND}/uploads/${img.image_path}`}
+                              src={`/uploads/${img.image_path}`}
                               alt="face"
                               className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
                             />
