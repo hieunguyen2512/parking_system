@@ -496,6 +496,11 @@ async def startup():
                     backoff = min(5.0 * (2 ** min(failures, 3)), 60.0)
                     if now - _cam_fail_at.get(idx, 0) < backoff:
                         continue
+                    # Nếu camera đang bị aliased, thử unmark định kỳ (60s) để
+                    # phát hiện khi user cắm thêm camera vật lý mới
+                    if idx in camera._aliased_indices:
+                        camera._aliased_indices.discard(idx)
+                        logger.info(f"Camera {idx} thử lại sau khi bị aliased (user có thể cắm thêm cam)")
                     try:
                         result = camera.stream_frame(idx)
                         if result is None:

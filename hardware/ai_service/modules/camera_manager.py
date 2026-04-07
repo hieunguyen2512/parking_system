@@ -81,6 +81,10 @@ class CameraManager:
         self._msmf_pending: dict[int, threading.Thread] = {}
         # Đếm số lần MSMF timeout để bỏ qua MSMF sau ngưỡng
         self._msmf_timeout_count: dict[int, int] = {}
+        # Camera bị aliased (DSHOW wraparound) – không đưa vào pool, trả placeholder
+        self._aliased_indices: set[int] = set()
+        # Fingerprint của mỗi camera đã mở thành công (dùng để phát hiện aliasing sau)
+        self._cam_fingerprints: dict[int, bytes] = {}
         logger.info(f"CameraManager khoi dong, che do: {CAPTURE_MODE}")
 
     @classmethod
@@ -322,10 +326,21 @@ class CameraManager:
                             time.sleep(0.1)
                         if not ok:
                             raise RuntimeError(f"Camera {idx} opened but no frames (broken pipeline)")
+                        # ── Anti-aliasing: kiểm tra frame trùng với camera đã mở ──────────
+                        # DSHOW trên Windows wrap index khi không đủ camera vật lý,
+                        # ví dụ index 2 → trả lại camera 0, index 3 → trả lại camera 1.
+                        fp_new = self._frame_fingerprint(frame)
+                        for open_idx, fp_existing in self._cam_fingerprints.items():
+                            if self._fingerprints_aliased(fp_new, fp_existing):
+                                raise RuntimeError(
+                                    f"Camera {idx} bị aliased với camera {open_idx} "
+                                    f"(DSHOW wraparound – chỉ {len(self._cam_fingerprints)} cam vật lý)"
+                                )
                         lock = self._get_cam_lock(idx)
                         with lock:
                             self._cameras[idx] = cap
                             cap = None  # pool giữ, không release
+                        self._cam_fingerprints[idx] = fp_new
                     logger.info(f"Camera {idx} pre-warmed OK (attempt {attempt + 1})")
                     success = True
                     break
@@ -337,7 +352,8 @@ class CameraManager:
                     if attempt < MAX_WARM_RETRIES - 1:
                         time.sleep(2.0)  # chờ Windows driver ổn định trước khi retry
             if not success:
-                logger.error(f"Camera {idx} warm thất bại sau {MAX_WARM_RETRIES} lần – stream sẽ tự retry khi browser kết nối")
+                self._aliased_indices.add(idx)
+                logger.error(f"Camera {idx} warm thất bại sau {MAX_WARM_RETRIES} lần – sẽ hiển thị màn đen")
 
     def stream_frame(self, cam_index: int) -> Optional[bytes]:
         """Đọc 1 frame từ KEEP-pool để phát MJPEG.
@@ -345,7 +361,12 @@ class CameraManager:
         Fast path: camera đã có trong pool → đọc trực tiếp (nhanh).
         Slow path: camera chưa/đã hỏng → mở qua _init_lock (tuần tự,
           tránh MSMF bị quá tải khi 4 stream khởi động cùng lúc).
+        Camera bị aliased (DSHOW wraparound) → trả None ngay (→ placeholder đen).
         """
+        # Camera đã xác định là aliased / không tồn tại → đừng thử mở nữa
+        if cam_index in self._aliased_indices:
+            return None
+
         cam_lock = self._get_cam_lock(cam_index)
 
         # ── Fast path ────────────────────────────────────────────────────────
@@ -376,9 +397,24 @@ class CameraManager:
                     try:
                         cap = self._open_cap(cam_index)
                         self._warmup(cap)
+                        # Kiểm tra aliasing trước khi đưa vào pool
+                        ret_a, frame_a = cap.read()
+                        if ret_a and frame_a is not None:
+                            fp_new = self._frame_fingerprint(frame_a)
+                            for open_idx, fp_existing in self._cam_fingerprints.items():
+                                if self._fingerprints_aliased(fp_new, fp_existing):
+                                    cap.release()
+                                    self._aliased_indices.add(cam_index)
+                                    logger.warning(
+                                        f"stream_frame cam{cam_index} aliased với cam{open_idx} "
+                                        f"(DSHOW wraparound) – đánh dấu placeholder"
+                                    )
+                                    return None
+                            self._cam_fingerprints[cam_index] = fp_new
                         self._cameras[cam_index] = cap
                     except Exception as e:
                         logger.warning(f"stream_frame init cam{cam_index}: {e}")
+                        self._aliased_indices.add(cam_index)
                         return None
         # _init_lock đã release – đọc frame đầu tiên NGOÀI lock để không chặn cam khác
 
