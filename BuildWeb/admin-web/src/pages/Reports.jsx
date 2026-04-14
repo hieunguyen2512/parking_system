@@ -38,7 +38,8 @@ export default function Reports() {
     finally { setLoading(false) }
   }
 
-  // KPI
+  useEffect(() => { loadData(period) }, [period])
+
   const totalRevenue  = dailyReports.reduce((s, r) => s + Number(r.total_revenue), 0)
   const totalSessions = dailyReports.reduce((s, r) => s + Number(r.total_sessions), 0)
   const totalSuccess  = dailyReports.reduce((s, r) => s + Number(r.auth_success_count), 0)
@@ -82,7 +83,7 @@ export default function Reports() {
 
   return (
     <div className="space-y-6">
-      {/* Toolbar */}
+      {}
       <div className="flex items-center justify-between">
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
           {[['week','7 ngày qua'],['month','30 ngày']].map(([v, l]) => (
@@ -126,7 +127,7 @@ export default function Reports() {
 
       {dailyReports.length > 0 && (<>
 
-      {/* KPI Cards */}
+      {}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <KpiCard icon={<TrendingUp size={20}/>} bg="bg-blue-100 text-blue-600"
           label="Tổng doanh thu" value={fmtVND(totalRevenue)} sub={`${dailyReports.length} ngày`} />
@@ -140,7 +141,7 @@ export default function Reports() {
           label="TB phiên / ngày" value={avgPerDay} sub="lượt / ngày" />
       </div>
 
-      {/* Revenue chart */}
+      {}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
         <h2 className="font-semibold text-gray-800 mb-5">Doanh thu theo ngày (VND)</h2>
         <ResponsiveContainer width="100%" height={260}>
@@ -156,7 +157,7 @@ export default function Reports() {
         </ResponsiveContainer>
       </div>
 
-      {/* Session chart + auth pie */}
+      {}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-5">
           <h2 className="font-semibold text-gray-800 mb-5">Lưu lượng xe theo ngày</h2>
@@ -204,7 +205,7 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Hourly traffic */}
+      {}
       {hourlyTraffic.some(h => h.entries > 0) && (
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
         <h2 className="font-semibold text-gray-800 mb-5">Lưu lượng theo khung giờ – Hôm nay</h2>
@@ -220,7 +221,7 @@ export default function Reports() {
       </div>
       )}
 
-      {/* Daily table */}
+      {}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100">
           <h2 className="font-semibold text-gray-800">Bảng chi tiết theo ngày</h2>

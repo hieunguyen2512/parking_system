@@ -2,13 +2,12 @@ const router = require('express').Router();
 const { pool } = require('../../db');
 const userAuth = require('../../middleware/userAuth');
 
-// GET /api/user/sessions  – lịch sử phiên gửi xe
 router.get('/', userAuth, async (req, res, next) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, parseInt(req.query.limit) || 10);
     const offset = (page - 1) * limit;
-    const status = req.query.status; // 'active' | 'completed' | 'abnormal'
+    const status = req.query.status;
 
     let whereExtra = '';
     const params = [req.user.id, limit, offset];
@@ -45,7 +44,6 @@ router.get('/', userAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/user/sessions/active  – phiên đang gửi xe
 router.get('/active', userAuth, async (req, res, next) => {
   try {
     const result = await pool.query(
@@ -63,7 +61,6 @@ router.get('/active', userAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/user/sessions/:id  – chi tiết phiên
 router.get('/:id', userAuth, async (req, res, next) => {
   try {
     const result = await pool.query(

@@ -2,7 +2,6 @@ const router = require('express').Router();
 const { pool } = require('../../db');
 const userAuth = require('../../middleware/userAuth');
 
-// GET /api/user/wallet  – số dư + thông tin ví
 router.get('/', userAuth, async (req, res, next) => {
   try {
     const result = await pool.query(
@@ -14,7 +13,6 @@ router.get('/', userAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/user/wallet/transactions  – lịch sử giao dịch
 router.get('/transactions', userAuth, async (req, res, next) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -48,7 +46,6 @@ router.get('/transactions', userAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// POST /api/user/wallet/topup  – nạp tiền (giả lập / tích hợp cổng TT)
 router.post('/topup', userAuth, async (req, res, next) => {
   try {
     const { amount, payment_gateway } = req.body;
@@ -62,7 +59,6 @@ router.post('/topup', userAuth, async (req, res, next) => {
       return res.status(400).json({ error: 'Phương thức thanh toán không hợp lệ' });
     }
 
-    // Lấy ví hiện tại (SELECT FOR UPDATE để tránh race condition)
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -105,7 +101,6 @@ router.post('/topup', userAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// POST /api/user/wallet/withdraw  – yêu cầu rút tiền
 router.post('/withdraw', userAuth, async (req, res, next) => {
   try {
     const { amount, bank_name, bank_account, account_name } = req.body;
@@ -120,7 +115,6 @@ router.post('/withdraw', userAuth, async (req, res, next) => {
       return res.status(400).json({ error: 'Thiếu thông tin ngân hàng (tên ngân hàng, số tài khoản, tên chủ tài khoản)' });
     }
 
-    // Kiểm tra không có yêu cầu đang chờ
     const pendingRes = await pool.query(
       `SELECT 1 FROM withdraw_requests WHERE user_id = $1 AND status IN ('pending', 'processing')`,
       [req.user.id]
@@ -133,7 +127,6 @@ router.post('/withdraw', userAuth, async (req, res, next) => {
     try {
       await client.query('BEGIN');
 
-      // Kiểm tra và trừ ví (SELECT FOR UPDATE)
       const walletRes = await client.query(
         'SELECT wallet_id, balance FROM wallets WHERE user_id = $1 FOR UPDATE',
         [req.user.id]
@@ -157,7 +150,6 @@ router.post('/withdraw', userAuth, async (req, res, next) => {
         [newBalance, wallet.wallet_id]
       );
 
-      // Ghi giao dịch ví
       const txRes = await client.query(
         `INSERT INTO wallet_transactions
            (wallet_id, user_id, transaction_type, amount, balance_before, balance_after, payment_gateway, status, description)
@@ -166,7 +158,6 @@ router.post('/withdraw', userAuth, async (req, res, next) => {
         [wallet.wallet_id, req.user.id, numAmount, balanceBefore, newBalance]
       );
 
-      // Tạo yêu cầu rút tiền
       const reqRes = await client.query(
         `INSERT INTO withdraw_requests
            (user_id, amount, bank_name, bank_account, account_name, wallet_tx_id, status)
@@ -191,7 +182,6 @@ router.post('/withdraw', userAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/user/wallet/withdrawals  – lịch sử yêu cầu rút tiền
 router.get('/withdrawals', userAuth, async (req, res, next) => {
   try {
     const result = await pool.query(

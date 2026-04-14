@@ -11,7 +11,6 @@ const TYPE_GROUPS = {
   alert:    ['low_balance_alert','session_abnormal','lot_full','system_offline_mode'],
 };
 
-// GET /api/event-logs?type=&typeGroup=&search=&page=1&limit=50&from=&to=
 router.get('/', auth, async (req, res, next) => {
   try {
     const { type, typeGroup, search = '', page = 1, limit = 50, from, to } = req.query;
@@ -19,7 +18,7 @@ router.get('/', auth, async (req, res, next) => {
     const conditions = [];
 
     if (typeGroup && TYPE_GROUPS[typeGroup]) {
-      // Lọc theo nhóm loại sự kiện
+
       params.push(TYPE_GROUPS[typeGroup]);
       conditions.push(`el.event_type = ANY($${params.length})`);
     } else if (type) {

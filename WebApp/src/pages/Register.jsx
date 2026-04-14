@@ -36,7 +36,7 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-600 to-blue-800 flex flex-col items-center justify-center px-6 py-10">
-      {/* Logo */}
+      {}
       <div className="mb-6 text-center">
         <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-lg">
           <span className="text-blue-600 text-2xl font-bold">P</span>
@@ -44,7 +44,7 @@ export default function Register() {
         <h1 className="text-white text-xl font-bold">ParkSmart</h1>
       </div>
 
-      {/* Card */}
+      {}
       <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl p-6">
         <h2 className="text-xl font-bold text-slate-800 mb-5">Tạo tài khoản</h2>
 

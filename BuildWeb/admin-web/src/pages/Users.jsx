@@ -130,7 +130,7 @@ export default function Users() {
     <div className="space-y-5">
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
-      {/* Toolbar */}
+      {}
       <div className="flex gap-3 items-center">
         <div className="relative flex-1 max-w-sm">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -149,7 +149,7 @@ export default function Users() {
         <div className="text-sm text-gray-500">{total} người dùng</div>
       </div>
 
-      {/* Table */}
+      {}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
@@ -204,11 +204,11 @@ export default function Users() {
         </div>
       </div>
 
-      {/* Detail Modal */}
+      {}
       {detail && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-            {/* Header */}
+            {}
             <div className="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
               <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-lg">
                 {detail.full_name?.[0] ?? '?'}
@@ -229,7 +229,7 @@ export default function Users() {
               <button onClick={() => setDetail(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
             </div>
 
-            {/* Tabs */}
+            {}
             <div className="flex gap-1 px-6 pt-4 border-b border-gray-100">
               {[
                 ['info',         <User size={14}/>,      'Thông tin'],
@@ -260,7 +260,7 @@ export default function Users() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-5">
-              {/* Tab: Thông tin – xem */}
+              {}
               {detailTab === 'info' && !editing && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
@@ -287,7 +287,7 @@ export default function Users() {
                 </div>
               )}
 
-              {/* Tab: Thông tin – sửa */}
+              {}
               {detailTab === 'info' && editing && (
                 <div className="space-y-4">
                   <div>
@@ -335,7 +335,7 @@ export default function Users() {
                 </div>
               )}
 
-              {/* Tab: Phương tiện */}
+              {}
               {detailTab === 'vehicles' && (
                 <div className="space-y-2">
                   {(detail.vehicles ?? []).map(v => (
@@ -376,7 +376,7 @@ export default function Users() {
                 </div>
               )}
 
-              {/* Tab: Lịch sử gửi xe */}
+              {}
               {detailTab === 'sessions' && (
                 <div className="space-y-1">
                   {(detail.sessions ?? []).map(s => (
@@ -402,7 +402,7 @@ export default function Users() {
                 </div>
               )}
 
-              {/* Tab: Giao dịch */}
+              {}
               {detailTab === 'transactions' && (
                 <div className="space-y-1">
                   {(detail.transactions ?? []).map(t => (
@@ -432,7 +432,7 @@ export default function Users() {
                 </div>
               )}
 
-              {/* Tab: Khuôn mặt */}
+              {}
               {detailTab === 'faces' && (
                 <div>
                   {faceLoading ? (
@@ -490,7 +490,7 @@ export default function Users() {
         </div>
       )}
 
-      {/* Preview ảnh khuôn mặt full màn hình */}
+      {}
       {previewImg && (
         <div
           className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4"

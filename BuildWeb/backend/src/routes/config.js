@@ -2,7 +2,6 @@ const router = require('express').Router();
 const auth = require('../middleware/auth');
 const { pool } = require('../db');
 
-// GET /api/config/pricing
 router.get('/pricing', auth, async (req, res, next) => {
   try {
     const result = await pool.query(
@@ -14,7 +13,6 @@ router.get('/pricing', auth, async (req, res, next) => {
   }
 });
 
-// PUT /api/config/pricing/:id
 router.put('/pricing/:id', auth, async (req, res, next) => {
   try {
     const { price_per_hour, start_hour, end_hour, label } = req.body;
@@ -32,7 +30,6 @@ router.put('/pricing/:id', auth, async (req, res, next) => {
   }
 });
 
-// POST /api/config/pricing
 router.post('/pricing', auth, async (req, res, next) => {
   try {
     const { price_per_hour, start_hour, end_hour, label } = req.body;
@@ -47,7 +44,6 @@ router.post('/pricing', auth, async (req, res, next) => {
   }
 });
 
-// DELETE /api/config/pricing/:id
 router.delete('/pricing/:id', auth, async (req, res, next) => {
   try {
     await pool.query('DELETE FROM pricing_configs WHERE config_id = $1', [req.params.id]);
@@ -57,7 +53,6 @@ router.delete('/pricing/:id', auth, async (req, res, next) => {
   }
 });
 
-// GET /api/config/system
 router.get('/system', auth, async (req, res, next) => {
   try {
     const result = await pool.query('SELECT config_key AS key, config_value AS value, description FROM system_configs ORDER BY config_key');
@@ -69,10 +64,9 @@ router.get('/system', auth, async (req, res, next) => {
   }
 });
 
-// PUT /api/config/system
 router.put('/system', auth, async (req, res, next) => {
   try {
-    const updates = req.body; // { key: value, ... }
+    const updates = req.body;
     for (const [key, value] of Object.entries(updates)) {
       await pool.query(`
         UPDATE system_configs SET config_value = $1, updated_at = NOW() WHERE config_key = $2
@@ -84,7 +78,6 @@ router.put('/system', auth, async (req, res, next) => {
   }
 });
 
-// GET /api/config/lot
 router.get('/lot', auth, async (req, res, next) => {
   try {
     const result = await pool.query('SELECT lot_id AS id, * FROM parking_lots LIMIT 1');
@@ -94,7 +87,6 @@ router.get('/lot', auth, async (req, res, next) => {
   }
 });
 
-// PUT /api/config/lot
 router.put('/lot', auth, async (req, res, next) => {
   try {
     const { name, address, total_capacity, phone, email } = req.body;

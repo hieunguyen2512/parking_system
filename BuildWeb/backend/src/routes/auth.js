@@ -3,7 +3,6 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../db');
 
-// POST /api/auth/login
 router.post('/login', async (req, res, next) => {
   try {
     const { username, password } = req.body;
@@ -31,7 +30,6 @@ router.post('/login', async (req, res, next) => {
       { expiresIn: process.env.JWT_EXPIRES_IN }
     );
 
-    // Ghi session vào DB
     await pool.query(
       `INSERT INTO admin_sessions (admin_id, token_hash, ip_address, user_agent)
        VALUES ($1, $2, $3, $4)`,
@@ -53,7 +51,6 @@ router.post('/login', async (req, res, next) => {
   }
 });
 
-// POST /api/auth/logout
 router.post('/logout', require('../middleware/auth'), async (req, res, next) => {
   try {
     const authHeader = req.headers['authorization'];
@@ -69,7 +66,6 @@ router.post('/logout', require('../middleware/auth'), async (req, res, next) => 
   }
 });
 
-// GET /api/auth/me
 router.get('/me', require('../middleware/auth'), async (req, res, next) => {
   try {
     const result = await pool.query(

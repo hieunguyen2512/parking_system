@@ -2,7 +2,6 @@ const router = require('express').Router();
 const auth = require('../middleware/auth');
 const { pool } = require('../db');
 
-// GET /api/users?search=&page=1&limit=20
 router.get('/', auth, async (req, res, next) => {
   try {
     const { search = '', page = 1, limit = 20 } = req.query;
@@ -42,7 +41,6 @@ router.get('/', auth, async (req, res, next) => {
   }
 });
 
-// GET /api/users/:id
 router.get('/:id', auth, async (req, res, next) => {
   try {
     const uid = req.params.id;
@@ -78,7 +76,6 @@ router.get('/:id', auth, async (req, res, next) => {
   }
 });
 
-// PUT /api/users/:id  – admin sửa thông tin người dùng
 router.put('/:id', auth, async (req, res, next) => {
   try {
     const { full_name, phone_number, is_active } = req.body;
@@ -90,7 +87,7 @@ router.put('/:id', auth, async (req, res, next) => {
       updates.push(`full_name = $${params.length}`);
     }
     if (phone_number !== undefined) {
-      // Kiểm tra số điện thoại không trùng với user khác
+
       const dup = await pool.query(
         'SELECT 1 FROM users WHERE phone_number = $1 AND user_id != $2',
         [phone_number.trim(), req.params.id]
@@ -123,7 +120,6 @@ router.put('/:id', auth, async (req, res, next) => {
   }
 });
 
-// GET /api/users/:id/face-images – admin xem danh sách ảnh khuôn mặt của user
 router.get('/:id/face-images', auth, async (req, res, next) => {
   try {
     const result = await pool.query(
@@ -137,7 +133,6 @@ router.get('/:id/face-images', auth, async (req, res, next) => {
   }
 });
 
-// PATCH /api/users/:id/toggle-active
 router.patch('/:id/toggle-active', auth, async (req, res, next) => {
   try {
     const result = await pool.query(`

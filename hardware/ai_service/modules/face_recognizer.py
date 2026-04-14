@@ -18,13 +18,12 @@ import config
 
 logger = logging.getLogger(__name__)
 
-
 class FaceRecognizer:
     _instance = None
 
     def __init__(self):
-        self._detector = None   # YOLOv8 face detector
-        self._embedder = None   # InsightFace embedding model
+        self._detector = None
+        self._embedder = None
         self._ready    = False
         self._lock     = Lock()
         self._known_embeddings: dict[str, list[np.ndarray]] = {}
@@ -36,7 +35,6 @@ class FaceRecognizer:
             cls._instance = cls()
         return cls._instance
 
-    # ─── Model loading ───────────────────────────────────────────────────────
     def _load_models(self):
         face_model_path = Path(config.MODELS_DIR) / "face_detector.pt"
         if not face_model_path.exists():
@@ -49,7 +47,6 @@ class FaceRecognizer:
 
             self._detector = YOLO(str(face_model_path))
 
-            # buffalo_sc: nhẹ hơn buffalo_l, vẫn cho embedding 512d tốt
             self._embedder = FaceAnalysis(
                 name="buffalo_sc",
                 root=config.MODELS_DIR,
@@ -62,7 +59,6 @@ class FaceRecognizer:
         except Exception as e:
             logger.error(f"Loi load face model: {e}")
 
-    # ─── Embedding extraction ─────────────────────────────────────────────────
     def _extract_embedding(self, image: np.ndarray) -> Optional[np.ndarray]:
         """
         1. YOLO detect face → crop vùng mặt lớn nhất
@@ -71,16 +67,16 @@ class FaceRecognizer:
         if not self._ready:
             return None
         try:
-            # Detect với YOLO
+
             results = self._detector(image, verbose=False)
             boxes   = results[0].boxes
             if len(boxes) == 0:
-                # Thử thẳng với toàn ảnh (trường hợp ảnh đã crop sẵn)
+
                 face_img = image
             else:
                 best_idx = int(boxes.conf.argmax())
                 x1, y1, x2, y2 = map(int, boxes.xyxy[best_idx])
-                # Thêm margin 10%
+
                 h, w = image.shape[:2]
                 pad_x = int((x2 - x1) * 0.1)
                 pad_y = int((y2 - y1) * 0.1)
@@ -91,23 +87,21 @@ class FaceRecognizer:
             if face_img.size == 0:
                 return None
 
-            # InsightFace embedding
             faces = self._embedder.get(face_img)
             if not faces:
-                # Thử lại với ảnh gốc
+
                 faces = self._embedder.get(image)
             if not faces:
                 return None
 
             emb = faces[0].embedding
-            emb = emb / (np.linalg.norm(emb) + 1e-6)  # L2 normalize
+            emb = emb / (np.linalg.norm(emb) + 1e-6)
             return emb.astype(np.float32)
 
         except Exception as e:
             logger.error(f"Loi embedding: {e}")
             return None
 
-    # ─── Known faces management ──────────────────────────────────────────────
     def reload_known_faces(self) -> int:
         """Quét lại uploads/faces/{user_id}/ và cập nhật embedding."""
         if not self._ready:
@@ -146,7 +140,6 @@ class FaceRecognizer:
         logger.info(f"Da load {loaded_users} user voi khuon mat da dang ky")
         return loaded_users
 
-    # ─── Main inference ──────────────────────────────────────────────────────
     def recognize(self, image_bytes: bytes) -> dict:
         """
         Nhận diện khuôn mặt từ JPEG bytes.
@@ -155,7 +148,6 @@ class FaceRecognizer:
         if not self._ready:
             return {"user_id": None, "confidence": 0.0, "matched": False}
 
-        # Lock toàn bộ inference để tránh crash YOLO/InsightFace khi gọi đồng thời
         with self._lock:
             nparr = np.frombuffer(image_bytes, np.uint8)
             image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)

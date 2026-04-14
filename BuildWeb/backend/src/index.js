@@ -11,7 +11,6 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
-// Bảo mật
 app.use(helmet());
 const allowedOrigins = [
   process.env.CORS_ORIGIN || 'http://localhost:3000',
@@ -19,7 +18,7 @@ const allowedOrigins = [
 ];
 app.use(cors({
   origin: (origin, callback) => {
-    // Cho phép tất cả localhost (mọi port) khi dev + file:// (origin = "null")
+
     if (!origin || origin === 'null' || allowedOrigins.includes(origin) ||
         /^http:\/\/localhost:\d+$/.test(origin)) {
       return callback(null, true);
@@ -29,20 +28,16 @@ app.use(cors({
   credentials: true,
 }));
 
-// Rate limiting cho login
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 phút
+  windowMs: 15 * 60 * 1000,
   max: 10,
   message: { error: 'Quá nhiều lần đăng nhập, thử lại sau 15 phút' },
 });
 
-// Parse JSON (10mb để hỗ trợ upload ảnh base64)
 app.use(express.json({ limit: '10mb' }));
 
-// Phục vụ file tĩnh (ảnh khuôn mặt, biển số...)
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
-// Routes – Admin
 app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/dashboard', require('./routes/dashboard'));
@@ -56,7 +51,6 @@ app.use('/api/config', require('./routes/config'));
 app.use('/api/barriers',  require('./routes/barriers'));
 app.use('/api/hardware',  require('./routes/hardware'));
 
-// Routes – User Web App
 app.use('/api/user/auth/login', loginLimiter);
 app.use('/api/user/auth', require('./routes/user/auth'));
 app.use('/api/user/vehicles', require('./routes/user/vehicles'));
@@ -67,7 +61,6 @@ app.use('/api/user/notifications', require('./routes/user/notifications'));
 app.use('/api/user/face-images',   require('./routes/user/faceImages'));
 app.use('/api/user/monthly-passes',require('./routes/user/monthlyPasses'));
 
-// Danh sách bãi đỗ xe (public cho user)
 const { pool } = require('./db');
 const userAuth  = require('./middleware/userAuth');
 app.get('/api/user/parking-lots', userAuth, async (req, res, next) => {
@@ -79,20 +72,16 @@ app.get('/api/user/parking-lots', userAuth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
-// 404
 app.use((req, res) => {
   res.status(404).json({ error: `Route không tồn tại: ${req.method} ${req.path}` });
 });
 
-// Error handler
 app.use(errorHandler);
 
-// ── Socket.IO setup ─────────────────────────────────────────────────────────
 const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
   cors: {
@@ -112,7 +101,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// Cho phép các route truy cập io
 app.set('io', io);
 
 const PORT = parseInt(process.env.PORT) || 4000;

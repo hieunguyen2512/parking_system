@@ -12,8 +12,7 @@ export default function Vehicles() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Ảnh biển số
-  const [plateUploading, setPlateUploading] = useState(null); // vehicle id đang upload
+  const [plateUploading, setPlateUploading] = useState(null);
   const [plateError, setPlateError]         = useState('');
   const [previewImg, setPreviewImg]         = useState(null);
   const fileInputRef = useRef(null);
@@ -101,7 +100,7 @@ export default function Vehicles() {
 
   return (
     <div className="p-4 space-y-4">
-      {/* Input file ẩn dùng chung */}
+      {}
       <input
         ref={fileInputRef}
         type="file"
@@ -110,7 +109,7 @@ export default function Vehicles() {
         onChange={handlePlateFileChange}
       />
 
-      {/* Header */}
+      {}
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-500">{activeVehicles.length} xe đã đăng ký</p>
         <button
@@ -121,7 +120,7 @@ export default function Vehicles() {
         </button>
       </div>
 
-      {/* Lỗi ảnh biển số */}
+      {}
       {plateError && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm flex items-center justify-between">
           {plateError}
@@ -129,7 +128,7 @@ export default function Vehicles() {
         </div>
       )}
 
-      {/* Form thêm xe */}
+      {}
       {showAdd && (
         <form onSubmit={handleAdd} className="card space-y-3 border-blue-200 border-2">
           <h3 className="font-semibold text-slate-800">Thêm xe mới</h3>
@@ -164,7 +163,7 @@ export default function Vehicles() {
         </form>
       )}
 
-      {/* Danh sách xe */}
+      {}
       {activeVehicles.length === 0 ? (
         <div className="text-center py-16 text-slate-400">
           <Car size={40} className="mx-auto mb-3 opacity-30" />
@@ -175,7 +174,7 @@ export default function Vehicles() {
         <div className="space-y-3">
           {activeVehicles.map(v => (
             <div key={v.id} className="card space-y-3">
-              {/* Thông tin xe + nút */}
+              {}
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
                   <Car size={20} className="text-blue-600" />
@@ -220,7 +219,7 @@ export default function Vehicles() {
                 )}
               </div>
 
-              {/* Ảnh biển số */}
+              {}
               <div className="border-t border-slate-100 pt-3">
                 <p className="text-xs font-medium text-slate-500 mb-2 flex items-center gap-1">
                   <ImageIcon size={12} /> Ảnh biển số xe
@@ -271,7 +270,7 @@ export default function Vehicles() {
         </div>
       )}
 
-      {/* Preview ảnh full màn hình */}
+      {}
       {previewImg && (
         <div
           className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"

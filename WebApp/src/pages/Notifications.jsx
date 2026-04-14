@@ -31,7 +31,7 @@ export default function Notifications() {
 
   return (
     <div className="p-4 space-y-3">
-      {/* Header */}
+      {}
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-500">
           {unreadCount > 0 ? `${unreadCount} chưa đọc` : 'Tất cả đã đọc'}
@@ -81,7 +81,7 @@ export default function Notifications() {
         </div>
       )}
 
-      {/* Tải thêm */}
+      {}
       <button
         onClick={() => fetchNotifications(notifPage + 1)}
         className="w-full text-sm text-slate-400 hover:text-slate-600 py-3"

@@ -8,10 +8,8 @@ import {
 } from 'recharts'
 import {
   ParkingSquare, Car, CheckCircle, BanknoteIcon,
-  Cpu, AlertTriangle, ChevronRight, DoorOpen, DoorClosed,
 } from 'lucide-react'
 import clsx from 'clsx'
-import HardwareMonitor from '../components/HardwareMonitor'
 
 const fmtVND = n => n?.toLocaleString('vi-VN') + 'đ'
 const fmtDuration = (entry) => {
@@ -21,29 +19,19 @@ const fmtDuration = (entry) => {
   return `${h}g ${m}p`
 }
 
-const DeviceTypeLookup = {
-  computer:'Máy tính', arduino:'Arduino', camera_face:'Camera Mặt',
-  camera_plate:'Camera Biển', barrier:'Barrier', sensor:'Cảm biến',
-  led:'Đèn LED', speaker:'Loa',
-}
-
 export default function Dashboard() {
   const {
-    lot, devices, activeSessions, alerts,
+    lot, activeSessions, alerts,
     dashboardStats,
-    openBarrierManual, currentAdmin,
-    fetchDashboardStats, fetchDevices, fetchActiveSessions, fetchAlerts,
+    fetchDashboardStats, fetchActiveSessions, fetchAlerts,
   } = useStore()
   const navigate = useNavigate()
-  const [showBarrierModal, setShowBarrierModal] = useState(false)
-  const [barrierForm, setBarrierForm] = useState({ lane: 'entry', reason: '' })
   const [tick, setTick] = useState(0)
   const [dailyReports, setDailyReports] = useState([])
   const [hourlyTraffic, setHourlyTraffic] = useState([])
 
   useEffect(() => {
     fetchDashboardStats()
-    fetchDevices()
     fetchActiveSessions()
     fetchAlerts()
     loadCharts()
@@ -64,7 +52,7 @@ export default function Dashboard() {
         reportsApi.daily(from, to),
         dashboardApi.hourlyTraffic(),
       ])
-      // Đảo ngược để ngày cũ → mới trên biểu đồ
+
       const sorted = [...daily].sort((a, b) => a.report_date > b.report_date ? 1 : -1)
       setDailyReports(sorted.map(r => ({
         ...r,
@@ -74,27 +62,17 @@ export default function Dashboard() {
     } catch {}
   }
 
-  // Ưu tiên dùng stats API, fallback về store lot
   const capacity  = dashboardStats?.capacity  ?? lot.total_capacity
   const occupied  = dashboardStats?.occupied  ?? lot.current_occupancy
   const todayRevenue  = dashboardStats?.todayRevenue  ?? 0
   const todaySessions = dashboardStats?.todaySessions ?? 0
 
-  const onlineCount  = devices.filter(d => d.status === 'online').length
-  const offlineCount = devices.filter(d => d.status !== 'online').length
   const unresolved   = alerts.filter(a => !a.is_resolved).length
   const occupancyPct = capacity > 0 ? Math.round(occupied * 100 / capacity) : 0
 
-  const handleBarrierOpen = () => {
-    if (!barrierForm.reason) return
-    openBarrierManual(barrierForm.lane, barrierForm.reason, currentAdmin.full_name)
-    setShowBarrierModal(false)
-    setBarrierForm({ lane: 'entry', reason: '' })
-  }
-
   return (
     <div className="space-y-6">
-      {/* ── Stat cards ──────────────────────────────────── */}
+      {}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
           icon={<ParkingSquare size={22} />}
@@ -129,9 +107,7 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* ── Occupancy bar + Quick controls ──────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="font-semibold text-gray-800">{lot.name}</h2>
@@ -169,46 +145,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Quick controls */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <h2 className="font-semibold text-gray-800 mb-4">Điều khiển nhanh</h2>
-          <div className="space-y-3">
-            <button
-              onClick={() => { setBarrierForm(f => ({ ...f, lane: 'entry' })); setShowBarrierModal(true) }}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-sm font-medium transition-colors"
-            >
-              <DoorOpen size={18} />
-              Mở barrier cổng VÀO (thủ công)
-            </button>
-            <button
-              onClick={() => { setBarrierForm(f => ({ ...f, lane: 'exit' })); setShowBarrierModal(true) }}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-sm font-medium transition-colors"
-            >
-              <DoorOpen size={18} />
-              Mở barrier cổng RA (thủ công)
-            </button>
-            <button
-              onClick={() => navigate('/devices')}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg text-sm font-medium transition-colors"
-            >
-              <Cpu size={18} />
-              Xem trạng thái thiết bị
-              <ChevronRight size={16} className="ml-auto" />
-            </button>
-          </div>
-          {offlineCount > 0 && (
-            <div className="mt-3 flex items-center gap-2 text-xs text-rose-600 bg-rose-50 rounded-lg px-3 py-2">
-              <AlertTriangle size={13} />
-              {offlineCount} thiết bị không online
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Active sessions + Device status ─────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Active sessions */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <div className="flex items-center gap-2">
               <h2 className="font-semibold text-gray-800">Xe đang trong bãi</h2>
@@ -250,48 +187,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Device status */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-800">Thiết bị</h2>
-            <div className="flex gap-3 text-xs">
-              <span className="text-emerald-600 font-medium">{onlineCount} online</span>
-              <span className="text-rose-600 font-medium">{offlineCount} lỗi</span>
-            </div>
-          </div>
-          <div className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
-            {devices.map(d => (
-              <div key={d.device_id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50">
-                <span className={clsx(
-                  'w-2 h-2 rounded-full shrink-0',
-                  d.status === 'online' ? 'bg-emerald-500'
-                  : d.status === 'offline' ? 'bg-gray-400'
-                  : 'bg-rose-500'
-                )} />
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-gray-800 truncate">{d.device_name}</div>
-                  <div className="text-xs text-gray-400">{DeviceTypeLookup[d.device_type]}</div>
-                </div>
-                <span className={clsx(
-                  'text-xs font-medium',
-                  d.status === 'online' ? 'text-emerald-600'
-                  : d.status === 'offline' ? 'text-gray-500'
-                  : 'text-rose-600'
-                )}>
-                  {d.status === 'online' ? 'OK' : d.status === 'offline' ? 'Offline' : 'Lỗi'}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Hardware Monitor ─────────────────────────────── */}
-      <div className="bg-gray-800 rounded-xl border border-gray-700 p-5">
-        <HardwareMonitor />
-      </div>
-
-      {/* ── Charts ──────────────────────────────────────── */}
+      {}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
           <h2 className="font-semibold text-gray-800 mb-4">Doanh thu 7 ngày gần nhất</h2>
@@ -328,7 +224,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Recent Alerts ───────────────────────────────── */}
+      {}
       {unresolved > 0 && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
@@ -363,57 +259,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── Barrier Modal ────────────────────────────────── */}
-      {showBarrierModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-            <div className="px-6 py-5 border-b border-gray-100">
-              <h3 className="font-semibold text-gray-800">Mở barrier thủ công – {barrierForm.lane === 'entry' ? 'Cổng Vào' : 'Cổng Ra'}</h3>
-              <p className="text-xs text-gray-500 mt-1">Hành động này sẽ được ghi log đầy đủ.</p>
-            </div>
-            <div className="px-6 py-5 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Làn đường</label>
-                <select
-                  value={barrierForm.lane}
-                  onChange={e => setBarrierForm(f => ({ ...f, lane: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="entry">Cổng Vào</option>
-                  <option value="exit">Cổng Ra</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Lý do mở thủ công <span className="text-rose-500">*</span>
-                </label>
-                <textarea
-                  value={barrierForm.reason}
-                  onChange={e => setBarrierForm(f => ({ ...f, reason: e.target.value }))}
-                  rows={3}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                  placeholder="VD: Xe bị kẹt barrier, xe khẩn cấp, kiểm tra kỹ thuật..."
-                />
-              </div>
-            </div>
-            <div className="px-6 py-4 border-t border-gray-100 flex gap-3 justify-end">
-              <button
-                onClick={() => setShowBarrierModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleBarrierOpen}
-                disabled={!barrierForm.reason.trim()}
-                className="px-4 py-2 text-sm font-semibold bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition-colors"
-              >
-                Xác nhận mở Barrier
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   )
 }

@@ -2,7 +2,6 @@ const router = require('express').Router();
 const auth = require('../middleware/auth');
 const { pool } = require('../db');
 
-// GET /api/reports/daily?from=&to=
 router.get('/daily', auth, async (req, res, next) => {
   try {
     const from = req.query.from || new Date(Date.now() - 6 * 86400000).toISOString().split('T')[0];
@@ -84,7 +83,6 @@ router.get('/daily', auth, async (req, res, next) => {
   }
 });
 
-// GET /api/reports/summary?from=&to=
 router.get('/summary', auth, async (req, res, next) => {
   try {
     const from = req.query.from || new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
@@ -107,7 +105,6 @@ router.get('/summary', auth, async (req, res, next) => {
   }
 });
 
-// GET /api/reports/generate-day?date= (tính toán và lưu báo cáo ngày)
 router.post('/generate-day', auth, async (req, res, next) => {
   try {
     const { date } = req.body;

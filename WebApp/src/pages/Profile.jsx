@@ -17,7 +17,6 @@ export default function Profile() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  // Ảnh khuôn mặt
   const [faceImages, setFaceImages]       = useState([]);
   const [faceLoading, setFaceLoading]     = useState(false);
   const [faceError, setFaceError]         = useState('');
@@ -130,7 +129,7 @@ export default function Profile() {
 
   return (
     <div className="p-4 space-y-4">
-      {/* Avatar + tên */}
+      {}
       <div className="card flex items-center gap-4">
         <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
           <span className="text-blue-600 text-2xl font-bold">
@@ -148,11 +147,11 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Thông báo */}
+      {}
       {message && <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm">{message}</div>}
       {error   && <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">{error}</div>}
 
-      {/* Sửa tên */}
+      {}
       <div className="card">
         <div className="flex items-center justify-between cursor-pointer" onClick={() => { setEditName(v => !v); setError(''); setMessage(''); }}>
           <div className="flex items-center gap-2">
@@ -182,7 +181,7 @@ export default function Profile() {
         )}
       </div>
 
-      {/* Số điện thoại (chỉ đọc) */}
+      {}
       <div className="card flex items-center gap-2">
         <Phone size={18} className="text-slate-400 flex-shrink-0" />
         <div>
@@ -191,7 +190,7 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Đổi mật khẩu */}
+      {}
       <div className="card">
         <div className="flex items-center justify-between cursor-pointer" onClick={() => { setChangePw(v => !v); setError(''); setMessage(''); }}>
           <div className="flex items-center gap-2">
@@ -232,7 +231,7 @@ export default function Profile() {
         )}
       </div>
 
-      {/* Ảnh khuôn mặt */}
+      {}
       <div className="card">
         <div
           className="flex items-center justify-between cursor-pointer"
@@ -261,7 +260,7 @@ export default function Profile() {
               <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs">{faceError}</div>
             )}
 
-            {/* Input file ẩn */}
+            {}
             <input
               ref={fileInputRef}
               type="file"
@@ -270,7 +269,7 @@ export default function Profile() {
               onChange={handleFaceUpload}
             />
 
-            {/* Nút upload */}
+            {}
             {faceImages.length < 5 && (
               <button
                 onClick={() => fileInputRef.current?.click()}
@@ -282,7 +281,7 @@ export default function Profile() {
               </button>
             )}
 
-            {/* Danh sách ảnh */}
+            {}
             {faceLoading ? (
               <p className="text-center text-slate-400 text-sm py-4">Đang tải...</p>
             ) : faceImages.length === 0 ? (
@@ -297,7 +296,7 @@ export default function Profile() {
                       className="w-full h-full object-cover cursor-pointer"
                       onClick={() => setPreviewImg(`/uploads/${img.image_path}`)}
                     />
-                    {/* Badge trạng thái */}
+                    {}
                     <span className={`absolute top-1 left-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
                       img.status === 'processed'   ? 'bg-green-500 text-white'
                       : img.status === 'failed'    ? 'bg-red-500 text-white'
@@ -309,7 +308,7 @@ export default function Profile() {
                         : img.status === 'processing'? 'Đang xử lý'
                         : 'Chờ xử lý'}
                     </span>
-                    {/* Nút xóa */}
+                    {}
                     <button
                       onClick={() => handleDeleteFaceImage(img.image_id)}
                       className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
@@ -328,7 +327,7 @@ export default function Profile() {
         )}
       </div>
 
-      {/* Đăng xuất */}
+      {}
       <button
         onClick={handleLogout}
         className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-red-600 border border-red-200 hover:bg-red-50 font-medium transition-colors"
@@ -338,7 +337,7 @@ export default function Profile() {
 
       <p className="text-center text-xs text-slate-300 pb-2">ParkSmart v1.0 – Bãi đỗ xe thông minh</p>
 
-      {/* Preview ảnh full màn hình */}
+      {}
       {previewImg && (
         <div
           className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"

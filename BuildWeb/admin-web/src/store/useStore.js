@@ -2,11 +2,10 @@ import { create } from 'zustand'
 import { io } from 'socket.io-client'
 import { authApi, dashboardApi, sessionsApi, devicesApi, alertsApi, configApi, barriersApi } from '../api/services'
 import {
-  mockAlerts, mockDevices, mockActiveSessions,
+  mockDevices, mockActiveSessions,
   mockPricing, mockSystemConfig, mockLot,
 } from '../data/mockData'
 
-// Kiểm tra backend có sẵn không
 async function isBackendAvailable() {
   try {
     const res = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:4000/api') + '/health', { signal: AbortSignal.timeout(1500) })
@@ -15,12 +14,11 @@ async function isBackendAvailable() {
 }
 
 export const useStore = create((set, get) => ({
-  // ── Auth ────────────────────────────────────────────────────
+
   isAuthenticated: !!localStorage.getItem('admin_token'),
   currentAdmin: JSON.parse(localStorage.getItem('admin_info') || 'null'),
-  useApi: false, // sẽ được set true nếu backend online
+  useApi: false,
 
-  // Kiểm tra backend khi app khởi động (tránh mất useApi sau khi reload trang)
   async initApi() {
     if (!localStorage.getItem('admin_token')) return
     const ok = await isBackendAvailable()
@@ -40,7 +38,7 @@ export const useStore = create((set, get) => ({
         throw err
       }
     }
-    // Fallback mock khi không có backend
+
     if (credentials.username === 'admin' && credentials.password === 'admin123') {
       const admin = { id: 'adm-001', username: 'admin', full_name: 'Quản trị viên', role: 'superadmin' }
       localStorage.setItem('admin_info', JSON.stringify(admin))
@@ -59,7 +57,6 @@ export const useStore = create((set, get) => ({
     set({ isAuthenticated: false, currentAdmin: null, useApi: false })
   },
 
-  // ── Lot / Dashboard stats ────────────────────────────────────
   lot: { ...mockLot },
   dashboardStats: null,
 
@@ -79,7 +76,6 @@ export const useStore = create((set, get) => ({
     } catch {}
   },
 
-  // ── Devices ─────────────────────────────────────────────────
   devices: mockDevices.map(d => ({ ...d })),
 
   async fetchDevices() {
@@ -104,7 +100,6 @@ export const useStore = create((set, get) => ({
     }))
   },
 
-  // ── Active Sessions ──────────────────────────────────────────
   activeSessions: mockActiveSessions.map(s => ({ ...s })),
 
   async fetchActiveSessions() {
@@ -114,8 +109,7 @@ export const useStore = create((set, get) => ({
     } catch {}
   },
 
-  // ── Alerts ──────────────────────────────────────────────────
-  alerts: mockAlerts.map(a => ({ ...a })),
+  alerts: [],
 
   async fetchAlerts() {
     try {
@@ -125,27 +119,24 @@ export const useStore = create((set, get) => ({
   },
 
   async resolveAlert(alertId, note) {
-    if (get().useApi) {
-      try {
-        await alertsApi.resolve(alertId, note)
-        await get().fetchAlerts()
-        return
-      } catch {}
+    try {
+      await alertsApi.resolve(alertId, note)
+      await get().fetchAlerts()
+    } catch {
+      set(s => ({
+        alerts: s.alerts.map(a =>
+          (a.alert_id === alertId || a.id === alertId)
+            ? { ...a, status: 'resolved', is_resolved: true, resolved_at: new Date(), resolution_note: note }
+            : a
+        ),
+      }))
     }
-    set(s => ({
-      alerts: s.alerts.map(a =>
-        (a.alert_id === alertId || a.id === alertId)
-          ? { ...a, status: 'resolved', is_resolved: true, resolved_at: new Date(), resolution_note: note }
-          : a
-      ),
-    }))
   },
 
   get unresolvedCount() {
     return get().alerts.filter(a => a.status === 'unresolved' || !a.is_resolved).length
   },
 
-  // ── Pricing ─────────────────────────────────────────────────
   pricing: mockPricing.map(p => ({ ...p })),
 
   async fetchPricing() {
@@ -169,7 +160,6 @@ export const useStore = create((set, get) => ({
     }))
   },
 
-  // ── System Config ───────────────────────────────────────────
   systemConfig: mockSystemConfig.map(c => ({ ...c })),
 
   async fetchSystemConfig() {
@@ -195,7 +185,6 @@ export const useStore = create((set, get) => ({
     }))
   },
 
-  // ── Manual Barrier ──────────────────────────────────────────
   barrierLogs: [],
 
   async openBarrierManual(deviceId, reason, adminName) {
@@ -208,7 +197,6 @@ export const useStore = create((set, get) => ({
     set(s => ({ barrierLogs: [entry, ...s.barrierLogs] }))
   },
 
-  // ── Live Events (Socket.IO từ backend) ────────────────────────────
   liveEvents: [],
   socketConnected: false,
   _socket: null,
@@ -224,7 +212,7 @@ export const useStore = create((set, get) => ({
     socket.on('vehicle:entry', (data) => {
       const ev = { id: Date.now(), type: 'vehicle:entry', data, ts: new Date() }
       set(s => ({ liveEvents: [ev, ...s.liveEvents].slice(0, 100) }))
-      // Refresh dashboard stats + active sessions
+
       get().fetchDashboardStats()
       get().fetchActiveSessions()
     })

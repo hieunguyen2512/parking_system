@@ -1,12 +1,4 @@
---
--- PostgreSQL database dump
---
-
 \restrict BxkE3TZKHOKShbTCKahYnTUa35HtVX10g0VLhQxz4U4xBrO77HVkQ8hLW3qWbEu
-
--- Dumped from database version 17.9
--- Dumped by pg_dump version 17.9
-
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -18,52 +10,16 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
-
---
--- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
---
-
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
-
-
---
--- Name: EXTENSION pgcrypto; Type: COMMENT; Schema: -; Owner: 
---
-
 COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
-
-
---
--- Name: uuid-ossp; Type: EXTENSION; Schema: -; Owner: -
---
-
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
-
-
---
--- Name: EXTENSION "uuid-ossp"; Type: COMMENT; Schema: -; Owner: 
---
-
 COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UUIDs)';
-
-
---
--- Name: trigger_create_wallet_for_new_user(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
 CREATE FUNCTION public.trigger_create_wallet_for_new_user() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN INSERT INTO wallets (user_id) VALUES (NEW.user_id); RETURN NEW; END;
 $$;
-
-
 ALTER FUNCTION public.trigger_create_wallet_for_new_user() OWNER TO postgres;
-
---
--- Name: trigger_log_device_status_change(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
 CREATE FUNCTION public.trigger_log_device_status_change() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -76,27 +32,13 @@ BEGIN
     RETURN NEW;
 END;
 $$;
-
-
 ALTER FUNCTION public.trigger_log_device_status_change() OWNER TO postgres;
-
---
--- Name: trigger_set_updated_at(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
 CREATE FUNCTION public.trigger_set_updated_at() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN NEW.updated_at = NOW(); RETURN NEW; END;
 $$;
-
-
 ALTER FUNCTION public.trigger_set_updated_at() OWNER TO postgres;
-
---
--- Name: update_face_images_updated_at(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
 CREATE FUNCTION public.update_face_images_updated_at() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -105,18 +47,9 @@ BEGIN
     RETURN NEW;
 END;
 $$;
-
-
 ALTER FUNCTION public.update_face_images_updated_at() OWNER TO postgres;
-
 SET default_tablespace = '';
-
 SET default_table_access_method = heap;
-
---
--- Name: admin_sessions; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.admin_sessions (
     session_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     admin_id uuid NOT NULL,
@@ -127,14 +60,7 @@ CREATE TABLE public.admin_sessions (
     revoked_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
-
-
 ALTER TABLE public.admin_sessions OWNER TO postgres;
-
---
--- Name: admins; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.admins (
     admin_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     username character varying(50) NOT NULL,
@@ -148,14 +74,7 @@ CREATE TABLE public.admins (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT admins_role_check CHECK (((role)::text = ANY ((ARRAY['superadmin'::character varying, 'admin'::character varying, 'operator'::character varying])::text[])))
 );
-
-
 ALTER TABLE public.admins OWNER TO postgres;
-
---
--- Name: authorizations; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.authorizations (
     auth_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     vehicle_id uuid NOT NULL,
@@ -173,14 +92,7 @@ CREATE TABLE public.authorizations (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT authorizations_auth_type_check CHECK (((auth_type)::text = ANY ((ARRAY['once'::character varying, 'daily'::character varying, 'permanent'::character varying])::text[])))
 );
-
-
 ALTER TABLE public.authorizations OWNER TO postgres;
-
---
--- Name: daily_reports; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.daily_reports (
     report_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     lot_id uuid NOT NULL,
@@ -200,14 +112,7 @@ CREATE TABLE public.daily_reports (
     generated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT daily_reports_peak_hour_check CHECK (((peak_hour >= 0) AND (peak_hour <= 23)))
 );
-
-
 ALTER TABLE public.daily_reports OWNER TO postgres;
-
---
--- Name: device_status_logs; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.device_status_logs (
     log_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     device_id uuid NOT NULL,
@@ -215,14 +120,7 @@ CREATE TABLE public.device_status_logs (
     message text,
     logged_at timestamp with time zone DEFAULT now() NOT NULL
 );
-
-
 ALTER TABLE public.device_status_logs OWNER TO postgres;
-
---
--- Name: devices; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.devices (
     device_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     lot_id uuid NOT NULL,
@@ -241,14 +139,7 @@ CREATE TABLE public.devices (
     CONSTRAINT devices_lane_check CHECK (((lane)::text = ANY ((ARRAY['entry'::character varying, 'exit'::character varying, 'both'::character varying])::text[]))),
     CONSTRAINT devices_status_check CHECK (((status)::text = ANY ((ARRAY['online'::character varying, 'offline'::character varying, 'error'::character varying, 'maintenance'::character varying])::text[])))
 );
-
-
 ALTER TABLE public.devices OWNER TO postgres;
-
---
--- Name: event_logs; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.event_logs (
     event_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     lot_id uuid,
@@ -264,14 +155,7 @@ CREATE TABLE public.event_logs (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT event_logs_session_kind_check CHECK (((session_kind)::text = ANY ((ARRAY['member'::character varying, 'guest'::character varying])::text[])))
 );
-
-
 ALTER TABLE public.event_logs OWNER TO postgres;
-
---
--- Name: face_embeddings; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.face_embeddings (
     embedding_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     user_id uuid NOT NULL,
@@ -283,14 +167,7 @@ CREATE TABLE public.face_embeddings (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
-
-
 ALTER TABLE public.face_embeddings OWNER TO postgres;
-
---
--- Name: fcm_tokens; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.fcm_tokens (
     token_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     user_id uuid NOT NULL,
@@ -302,14 +179,7 @@ CREATE TABLE public.fcm_tokens (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT fcm_tokens_device_type_check CHECK (((device_type)::text = ANY ((ARRAY['android'::character varying, 'ios'::character varying, 'web'::character varying])::text[])))
 );
-
-
 ALTER TABLE public.fcm_tokens OWNER TO postgres;
-
---
--- Name: guest_sessions; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.guest_sessions (
     session_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     session_code character varying(20) NOT NULL,
@@ -329,6 +199,8 @@ CREATE TABLE public.guest_sessions (
     paid_at timestamp with time zone,
     status character varying(20) DEFAULT 'active'::character varying NOT NULL,
     abnormal_reason text,
+    entry_device_id uuid,
+    exit_device_id uuid,
     is_synced boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -338,14 +210,7 @@ CREATE TABLE public.guest_sessions (
     CONSTRAINT guest_sessions_payment_status_check CHECK (((payment_status)::text = ANY ((ARRAY['pending'::character varying, 'paid'::character varying, 'failed'::character varying])::text[]))),
     CONSTRAINT guest_sessions_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'completed'::character varying, 'abnormal'::character varying])::text[])))
 );
-
-
 ALTER TABLE public.guest_sessions OWNER TO postgres;
-
---
--- Name: manual_overrides; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.manual_overrides (
     override_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     lot_id uuid,
@@ -359,14 +224,7 @@ CREATE TABLE public.manual_overrides (
     executed_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT manual_overrides_action_check CHECK (((action)::text = ANY ((ARRAY['open_barrier'::character varying, 'close_barrier'::character varying, 'end_session'::character varying, 'unlock_account'::character varying, 'force_exit'::character varying])::text[])))
 );
-
-
 ALTER TABLE public.manual_overrides OWNER TO postgres;
-
---
--- Name: monthly_passes; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.monthly_passes (
     pass_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     user_id uuid NOT NULL,
@@ -385,14 +243,7 @@ CREATE TABLE public.monthly_passes (
     CONSTRAINT monthly_passes_fee_paid_check CHECK ((fee_paid >= (0)::numeric)),
     CONSTRAINT monthly_passes_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'expired'::character varying, 'cancelled'::character varying])::text[])))
 );
-
-
 ALTER TABLE public.monthly_passes OWNER TO postgres;
-
---
--- Name: notifications; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.notifications (
     notification_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     user_id uuid NOT NULL,
@@ -404,14 +255,7 @@ CREATE TABLE public.notifications (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT notifications_type_check CHECK (((type)::text = ANY ((ARRAY['vehicle_entry'::character varying, 'vehicle_exit'::character varying, 'fee_deducted'::character varying, 'topup_success'::character varying, 'low_balance'::character varying, 'withdraw_success'::character varying, 'session_abnormal'::character varying, 'auth_granted'::character varying, 'system'::character varying])::text[])))
 );
-
-
 ALTER TABLE public.notifications OWNER TO postgres;
-
---
--- Name: parking_lots; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.parking_lots (
     lot_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     name character varying(200) NOT NULL,
@@ -427,14 +271,7 @@ CREATE TABLE public.parking_lots (
     CONSTRAINT parking_lots_current_occupancy_check CHECK ((current_occupancy >= 0)),
     CONSTRAINT parking_lots_total_capacity_check CHECK ((total_capacity > 0))
 );
-
-
 ALTER TABLE public.parking_lots OWNER TO postgres;
-
---
--- Name: parking_sessions; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.parking_sessions (
     session_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     vehicle_id uuid NOT NULL,
@@ -458,6 +295,8 @@ CREATE TABLE public.parking_sessions (
     abnormal_reason text,
     force_ended_by uuid,
     force_end_reason text,
+    entry_device_id uuid,
+    exit_device_id uuid,
     is_synced boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -466,14 +305,7 @@ CREATE TABLE public.parking_sessions (
     CONSTRAINT parking_sessions_session_type_check CHECK (((session_type)::text = ANY ((ARRAY['member'::character varying, 'authorized'::character varying])::text[]))),
     CONSTRAINT parking_sessions_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'completed'::character varying, 'abnormal'::character varying, 'force_ended'::character varying])::text[])))
 );
-
-
 ALTER TABLE public.parking_sessions OWNER TO postgres;
-
---
--- Name: pricing_configs; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.pricing_configs (
     config_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     lot_id uuid NOT NULL,
@@ -489,14 +321,7 @@ CREATE TABLE public.pricing_configs (
     CONSTRAINT pricing_configs_price_per_hour_check CHECK ((price_per_hour >= (0)::numeric)),
     CONSTRAINT pricing_configs_start_hour_check CHECK (((start_hour >= 0) AND (start_hour <= 23)))
 );
-
-
 ALTER TABLE public.pricing_configs OWNER TO postgres;
-
---
--- Name: refresh_tokens; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.refresh_tokens (
     token_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     user_id uuid NOT NULL,
@@ -507,14 +332,7 @@ CREATE TABLE public.refresh_tokens (
     revoked_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
-
-
 ALTER TABLE public.refresh_tokens OWNER TO postgres;
-
---
--- Name: report_exports; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.report_exports (
     export_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     admin_id uuid NOT NULL,
@@ -531,14 +349,7 @@ CREATE TABLE public.report_exports (
     CONSTRAINT report_exports_file_format_check CHECK (((file_format)::text = ANY ((ARRAY['csv'::character varying, 'xlsx'::character varying, 'pdf'::character varying])::text[]))),
     CONSTRAINT report_exports_status_check CHECK (((status)::text = ANY ((ARRAY['processing'::character varying, 'completed'::character varying, 'failed'::character varying])::text[])))
 );
-
-
 ALTER TABLE public.report_exports OWNER TO postgres;
-
---
--- Name: sync_queue; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.sync_queue (
     queue_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     lot_id uuid,
@@ -555,14 +366,7 @@ CREATE TABLE public.sync_queue (
     CONSTRAINT sync_queue_operation_check CHECK (((operation)::text = ANY ((ARRAY['insert'::character varying, 'update'::character varying, 'delete'::character varying])::text[]))),
     CONSTRAINT sync_queue_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'syncing'::character varying, 'synced'::character varying, 'failed'::character varying])::text[])))
 );
-
-
 ALTER TABLE public.sync_queue OWNER TO postgres;
-
---
--- Name: system_alerts; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.system_alerts (
     alert_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     lot_id uuid,
@@ -583,14 +387,7 @@ CREATE TABLE public.system_alerts (
     CONSTRAINT system_alerts_severity_check CHECK (((severity)::text = ANY ((ARRAY['info'::character varying, 'warning'::character varying, 'critical'::character varying])::text[]))),
     CONSTRAINT system_alerts_status_check CHECK (((status)::text = ANY ((ARRAY['unresolved'::character varying, 'resolved'::character varying, 'ignored'::character varying])::text[])))
 );
-
-
 ALTER TABLE public.system_alerts OWNER TO postgres;
-
---
--- Name: system_configs; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.system_configs (
     config_key character varying(100) NOT NULL,
     config_value text NOT NULL,
@@ -600,14 +397,7 @@ CREATE TABLE public.system_configs (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT system_configs_data_type_check CHECK (((data_type)::text = ANY ((ARRAY['string'::character varying, 'integer'::character varying, 'decimal'::character varying, 'boolean'::character varying, 'json'::character varying])::text[])))
 );
-
-
 ALTER TABLE public.system_configs OWNER TO postgres;
-
---
--- Name: user_face_images; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.user_face_images (
     image_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     user_id uuid NOT NULL,
@@ -619,14 +409,7 @@ CREATE TABLE public.user_face_images (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT user_face_images_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'processing'::character varying, 'processed'::character varying, 'failed'::character varying])::text[])))
 );
-
-
 ALTER TABLE public.user_face_images OWNER TO postgres;
-
---
--- Name: users; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.users (
     user_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     full_name character varying(100) NOT NULL,
@@ -639,14 +422,7 @@ CREATE TABLE public.users (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
-
-
 ALTER TABLE public.users OWNER TO postgres;
-
---
--- Name: v_active_sessions; Type: VIEW; Schema: public; Owner: postgres
---
-
 CREATE VIEW public.v_active_sessions AS
  SELECT parking_sessions.session_id,
     parking_sessions.lot_id,
@@ -669,14 +445,7 @@ UNION ALL
     'guest'::text AS session_kind
    FROM public.guest_sessions
   WHERE ((guest_sessions.status)::text = 'active'::text);
-
-
 ALTER VIEW public.v_active_sessions OWNER TO postgres;
-
---
--- Name: v_device_status; Type: VIEW; Schema: public; Owner: postgres
---
-
 CREATE VIEW public.v_device_status AS
  SELECT d.device_id,
     pl.name AS lot_name,
@@ -691,14 +460,7 @@ CREATE VIEW public.v_device_status AS
    FROM (public.devices d
      JOIN public.parking_lots pl ON ((pl.lot_id = d.lot_id)))
   ORDER BY d.lot_id, d.device_type;
-
-
 ALTER VIEW public.v_device_status OWNER TO postgres;
-
---
--- Name: v_lot_overview; Type: VIEW; Schema: public; Owner: postgres
---
-
 CREATE VIEW public.v_lot_overview AS
  SELECT lot_id,
     name AS lot_name,
@@ -714,14 +476,7 @@ CREATE VIEW public.v_lot_overview AS
           WHERE ((sa.lot_id = pl.lot_id) AND ((sa.status)::text = 'unresolved'::text))) AS open_alerts,
     is_active
    FROM public.parking_lots pl;
-
-
 ALTER VIEW public.v_lot_overview OWNER TO postgres;
-
---
--- Name: v_pending_face_images; Type: VIEW; Schema: public; Owner: postgres
---
-
 CREATE VIEW public.v_pending_face_images AS
  SELECT fi.image_id,
     fi.user_id,
@@ -734,14 +489,7 @@ CREATE VIEW public.v_pending_face_images AS
      JOIN public.users u ON ((u.user_id = fi.user_id)))
   WHERE ((fi.status)::text = ANY ((ARRAY['pending'::character varying, 'processing'::character varying])::text[]))
   ORDER BY fi.created_at;
-
-
 ALTER VIEW public.v_pending_face_images OWNER TO postgres;
-
---
--- Name: v_user_face_summary; Type: VIEW; Schema: public; Owner: postgres
---
-
 CREATE VIEW public.v_user_face_summary AS
  SELECT u.user_id,
     u.full_name,
@@ -755,14 +503,7 @@ CREATE VIEW public.v_user_face_summary AS
      LEFT JOIN public.user_face_images fi ON ((fi.user_id = u.user_id)))
      LEFT JOIN public.face_embeddings fe ON (((fe.user_id = u.user_id) AND fe.is_active)))
   GROUP BY u.user_id, u.full_name, u.phone_number;
-
-
 ALTER VIEW public.v_user_face_summary OWNER TO postgres;
-
---
--- Name: vehicles; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.vehicles (
     vehicle_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     user_id uuid NOT NULL,
@@ -773,14 +514,7 @@ CREATE TABLE public.vehicles (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
-
-
 ALTER TABLE public.vehicles OWNER TO postgres;
-
---
--- Name: wallet_transactions; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.wallet_transactions (
     transaction_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     wallet_id uuid NOT NULL,
@@ -803,14 +537,7 @@ CREATE TABLE public.wallet_transactions (
     CONSTRAINT wallet_transactions_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'success'::character varying, 'failed'::character varying, 'cancelled'::character varying])::text[]))),
     CONSTRAINT wallet_transactions_transaction_type_check CHECK (((transaction_type)::text = ANY ((ARRAY['topup'::character varying, 'deduct'::character varying, 'withdraw'::character varying, 'refund'::character varying])::text[])))
 );
-
-
 ALTER TABLE public.wallet_transactions OWNER TO postgres;
-
---
--- Name: wallets; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.wallets (
     wallet_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     user_id uuid NOT NULL,
@@ -819,14 +546,7 @@ CREATE TABLE public.wallets (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT wallets_balance_check CHECK ((balance >= (0)::numeric))
 );
-
-
 ALTER TABLE public.wallets OWNER TO postgres;
-
---
--- Name: withdraw_requests; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.withdraw_requests (
     request_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     user_id uuid NOT NULL,
@@ -844,14 +564,7 @@ CREATE TABLE public.withdraw_requests (
     CONSTRAINT withdraw_requests_amount_check CHECK ((amount >= (10000)::numeric)),
     CONSTRAINT withdraw_requests_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'processing'::character varying, 'completed'::character varying, 'rejected'::character varying])::text[])))
 );
-
-
 ALTER TABLE public.withdraw_requests OWNER TO postgres;
-
---
--- Data for Name: admin_sessions; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.admin_sessions (session_id, admin_id, token_hash, ip_address, user_agent, expires_at, revoked_at, created_at) FROM stdin;
 49295f93-5639-416a-999a-3c35a81fe940	a1166982-3803-4093-aa6d-04c2c8976ee5	1cfd9f25c922eb77f866495efce38b3d288db15051e95a3de8a1e3fa6ebe9315	::1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36	2026-03-31 22:45:42.150478+07	\N	2026-03-31 14:45:42.150478+07
 2316b304-ab4d-4bbe-a383-5a9f59441b61	a1166982-3803-4093-aa6d-04c2c8976ee5	297df547307dabe31cd8fa8649eff768e7d37fd1390937b08ba8ae5934b5549e	::1	Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.7920	2026-03-31 22:47:14.801991+07	\N	2026-03-31 14:47:14.801991+07
@@ -863,45 +576,15 @@ e4af48ff-fcc1-44a0-9dc1-e7160d815b3f	a1166982-3803-4093-aa6d-04c2c8976ee5	91cc6d
 ee7ddfa0-7d5a-46d4-ab91-21d5ff1b458c	a1166982-3803-4093-aa6d-04c2c8976ee5	6fcc518e571299e92ddc844953823fcee9d9a1b062ad4b8924417c44c3c99bc8	::1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36	2026-04-02 04:50:25.759879+07	2026-04-01 21:08:00.460018+07	2026-04-01 20:50:25.759879+07
 9291c13d-899d-4dc3-af42-f83f483e795c	a1166982-3803-4093-aa6d-04c2c8976ee5	70f65dcf6cf28cecb25154458e6cc0ddf5864a6ddfcf9c71368e28d58bc53949	::1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36	2026-04-02 05:08:06.012182+07	\N	2026-04-01 21:08:06.012182+07
 \.
-
-
---
--- Data for Name: admins; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.admins (admin_id, username, password_hash, full_name, email, role, is_active, last_login_at, created_at, updated_at) FROM stdin;
 a1166982-3803-4093-aa6d-04c2c8976ee5	admin	$2a$12$Cump7tIdTrYKjF0dBcYoleKSRMzb75V54sk0AcAOb2Mz9MHvSN4pu	Quản trị viên	admin@parking.local	superadmin	t	\N	2026-03-31 14:36:19.334925+07	2026-03-31 14:36:19.334925+07
 \.
-
-
---
--- Data for Name: authorizations; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.authorizations (auth_id, vehicle_id, owner_user_id, delegate_name, delegate_face_image, delegate_embedding, auth_type, valid_from, valid_until, is_active, is_consumed, consumed_at, model_version, created_at) FROM stdin;
 \.
-
-
---
--- Data for Name: daily_reports; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.daily_reports (report_id, lot_id, report_date, total_sessions, member_sessions, guest_sessions_count, total_revenue, member_revenue, guest_revenue, auth_success_count, auth_failed_count, auth_fallback_guest_count, avg_duration_minutes, hourly_occupancy, peak_hour, generated_at) FROM stdin;
 \.
-
-
---
--- Data for Name: device_status_logs; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.device_status_logs (log_id, device_id, status, message, logged_at) FROM stdin;
 \.
-
-
---
--- Data for Name: devices; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.devices (device_id, lot_id, device_name, device_type, lane, ip_address, serial_port, baud_rate, status, last_heartbeat, notes, created_at, updated_at) FROM stdin;
 8605967a-0c82-4d85-bd65-b89d22268d13	c9f3967e-15ce-4010-8376-fac0ff9bacf3	Arduino - Cổng vào	arduino	entry	\N	COM3	9600	offline	\N	\N	2026-03-31 14:36:19.334925+07	2026-03-31 14:36:19.334925+07
 43ea7073-5a58-468a-a01c-05134ac01562	c9f3967e-15ce-4010-8376-fac0ff9bacf3	Arduino - Cổng ra	arduino	exit	\N	COM4	9600	offline	\N	\N	2026-03-31 14:36:19.334925+07	2026-03-31 14:36:19.334925+07
@@ -912,38 +595,14 @@ c7e880bf-d86d-45ac-af0d-ea8d6e6f5b79	c9f3967e-15ce-4010-8376-fac0ff9bacf3	Camera
 60def6cd-85ad-45fe-a69c-9ccf12907b6b	c9f3967e-15ce-4010-8376-fac0ff9bacf3	Barrier - Cổng vào	barrier	entry	\N	\N	9600	offline	\N	\N	2026-03-31 14:36:19.334925+07	2026-03-31 14:36:19.334925+07
 78e41d47-f04c-4df8-ac74-568451a07958	c9f3967e-15ce-4010-8376-fac0ff9bacf3	Barrier - Cổng ra	barrier	exit	\N	\N	9600	offline	\N	\N	2026-03-31 14:36:19.334925+07	2026-03-31 14:36:19.334925+07
 \.
-
-
---
--- Data for Name: event_logs; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.event_logs (event_id, lot_id, event_type, session_id, session_kind, user_id, admin_id, device_id, license_plate, description, metadata, created_at) FROM stdin;
 59eb693c-1f15-41f4-a70b-6223ba471b2d	\N	SESSION_FORCE_ENDED	cc000001-0000-0000-0000-000000000002	\N	\N	a1166982-3803-4093-aa6d-04c2c8976ee5	\N	\N	Kết thúc cưỡng bức: d	\N	2026-03-31 21:30:39.453644+07
 10d24845-e0d7-4bad-883c-5bc6597b9722	\N	session_force_ended	dd000001-0000-0000-0000-000000000002	\N	\N	a1166982-3803-4093-aa6d-04c2c8976ee5	\N	51B-112.23	Kết thúc cưỡng bức (vãng lai): a	\N	2026-04-01 21:03:44.976879+07
 \.
-
-
---
--- Data for Name: face_embeddings; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.face_embeddings (embedding_id, user_id, embedding, face_image_path, model_version, is_primary, is_active, created_at, updated_at) FROM stdin;
 \.
-
-
---
--- Data for Name: fcm_tokens; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.fcm_tokens (token_id, user_id, token, device_type, device_info, is_active, created_at, updated_at) FROM stdin;
 \.
-
-
---
--- Data for Name: guest_sessions; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.guest_sessions (session_id, session_code, license_plate, lot_id, entry_time, exit_time, duration_minutes, entry_face_image_path, entry_plate_image_path, entry_composite_image_path, exit_composite_image_path, fee, payment_gateway, gateway_transaction_id, payment_status, paid_at, status, abnormal_reason, is_synced, created_at, updated_at) FROM stdin;
 dd000001-0000-0000-0000-000000000001	GX-260101	52F-445.67	c9f3967e-15ce-4010-8376-fac0ff9bacf3	2026-03-31 14:35:02.12005+07	\N	\N	\N	\N	\N	\N	\N	\N	\N	pending	\N	active	\N	f	2026-03-31 15:43:02.12005+07	2026-03-31 15:43:02.12005+07
 dd000001-0000-0000-0000-000000000003	GX-260103	30H-888.99	c9f3967e-15ce-4010-8376-fac0ff9bacf3	2026-03-31 12:53:02.12005+07	\N	\N	\N	\N	\N	\N	\N	\N	\N	pending	\N	active	\N	f	2026-03-31 15:43:02.12005+07	2026-03-31 15:43:02.12005+07
@@ -951,30 +610,12 @@ dd000001-0000-0000-0000-000000000005	GX-260105	51K-321.00	c9f3967e-15ce-4010-837
 dd000001-0000-0000-0000-000000000004	GX-260104	\N	c9f3967e-15ce-4010-8376-fac0ff9bacf3	2026-03-31 15:25:02.12005+07	2026-03-31 21:30:44.359785+07	\N	\N	\N	\N	\N	\N	\N	\N	pending	\N	abnormal	a	f	2026-03-31 15:43:02.12005+07	2026-03-31 21:30:44.359785+07
 dd000001-0000-0000-0000-000000000002	GX-260102	51B-112.23	c9f3967e-15ce-4010-8376-fac0ff9bacf3	2026-03-31 15:08:02.12005+07	2026-04-01 21:03:44.970021+07	1795	\N	\N	\N	\N	\N	\N	\N	pending	\N	abnormal	a	f	2026-03-31 15:43:02.12005+07	2026-04-01 21:03:44.970021+07
 \.
-
-
---
--- Data for Name: manual_overrides; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.manual_overrides (override_id, lot_id, admin_id, device_id, action, reason, related_session_id, related_license_plate, ip_address, executed_at) FROM stdin;
 \.
-
-
---
--- Data for Name: monthly_passes; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.monthly_passes (pass_id, user_id, vehicle_id, lot_id, license_plate, valid_from, valid_until, fee_paid, wallet_tx_id, status, note, created_at, updated_at) FROM stdin;
 0dc6de3b-cffe-4842-b545-60a152162b48	cb3be902-5237-4b0d-bd6b-adb839a64ab6	760d4f58-a0b3-44d5-80a4-c05a4f1bbbdc	c9f3967e-15ce-4010-8376-fac0ff9bacf3	15AL-04344	2026-03-31	2026-04-30	200000.00	223dfd8f-b8c1-42a8-9989-699ca3e233fb	active	\N	2026-03-31 20:59:16.471071+07	2026-03-31 20:59:16.471071+07
 62ef369a-bb26-4a77-bf71-46fafa122c4c	4ac3b376-d797-4bed-863c-e1a4288b5e44	9ee45aec-6165-4909-86bf-0536028aba11	c9f3967e-15ce-4010-8376-fac0ff9bacf3	15AN-04434	2026-03-31	2026-04-30	200000.00	5f2d0a5a-0ff1-45c6-8748-a513dea14755	active	\N	2026-03-31 21:03:26.900366+07	2026-03-31 21:03:26.900366+07
 \.
-
-
---
--- Data for Name: notifications; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.notifications (notification_id, user_id, type, title, body, data, is_read, created_at) FROM stdin;
 ee0a4ac1-386a-4fa4-b31d-a091fe523648	a1b2c3d4-0000-0000-0000-000000000001	topup_success	Nạp tiền thành công	Ví của bạn vừa được nạp 200,000 VND qua MoMo. Số dư hiện tại: 200,000 VND	\N	t	2026-03-31 14:40:54.809692+07
 ae0a1176-02e8-4ef5-a066-c45aad52d2c5	a1b2c3d4-0000-0000-0000-000000000001	vehicle_entry	Xe đã vào bãi	Xe 29B1-12345 đã vào bãi lúc 12:40 28/03	\N	t	2026-03-31 14:40:54.809692+07
@@ -983,42 +624,18 @@ ae0a1176-02e8-4ef5-a066-c45aad52d2c5	a1b2c3d4-0000-0000-0000-000000000001	vehicl
 e13e4fca-1d64-4022-8c63-144bde8e9195	a1b2c3d4-0000-0000-0000-000000000001	vehicle_entry	Xe đã vào bãi	Xe 30A-98765 đã vào bãi lúc 09:40 31/03	\N	f	2026-03-31 14:40:54.809692+07
 8cdb7b22-321b-44fc-af2e-ced5d7b23658	a1b2c3d4-0000-0000-0000-000000000002	low_balance	Số dư sắp hết	Số dư ví của bạn chỉ còn 30,000 VND – thấp hơn ngưỡng cảnh báo 50,000 VND.	\N	f	2026-03-31 14:40:54.809692+07
 \.
-
-
---
--- Data for Name: parking_lots; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.parking_lots (lot_id, name, address, total_capacity, current_occupancy, phone, email, is_active, created_at, updated_at) FROM stdin;
 c9f3967e-15ce-4010-8376-fac0ff9bacf3	Bãi Xe Thông Minh – Trường ĐH Hàng Hải Việt Nam	484 Lạch Tray, Đổng Quốc Bình, Lê Chân, Hải Phòng	100	7	0225-3829-250	baixe@vimaru.edu.vn	t	2026-03-31 14:36:19.334925+07	2026-04-01 21:03:44.974957+07
 \.
-
-
---
--- Data for Name: parking_sessions; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.parking_sessions (session_id, vehicle_id, user_id, auth_id, session_type, license_plate, lot_id, entry_time, exit_time, duration_minutes, entry_face_image_path, entry_plate_image_path, entry_composite_image_path, exit_face_image_path, exit_plate_image_path, exit_composite_image_path, fee, wallet_transaction_id, status, abnormal_reason, force_ended_by, force_end_reason, is_synced, created_at, updated_at) FROM stdin;
 cc000001-0000-0000-0000-000000000001	b1b2c3d4-0000-0000-0000-000000000001	a1b2c3d4-0000-0000-0000-000000000001	\N	member	29B1-12345	c9f3967e-15ce-4010-8376-fac0ff9bacf3	2026-03-31 13:58:02.12005+07	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	active	\N	\N	\N	f	2026-03-31 15:43:02.12005+07	2026-03-31 15:43:02.12005+07
 cc000002-0000-0000-0000-000000000001	b1b2c3d4-0000-0000-0000-000000000003	a1b2c3d4-0000-0000-0000-000000000002	\N	member	51F-11111	c9f3967e-15ce-4010-8376-fac0ff9bacf3	2026-03-31 13:23:02.12005+07	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	active	\N	\N	\N	f	2026-03-31 15:43:02.12005+07	2026-03-31 15:43:02.12005+07
 cc000001-0000-0000-0000-000000000002	b1b2c3d4-0000-0000-0000-000000000002	a1b2c3d4-0000-0000-0000-000000000001	\N	member	30A-98765	c9f3967e-15ce-4010-8376-fac0ff9bacf3	2026-03-31 15:13:02.12005+07	2026-03-31 21:30:39.447375+07	\N	\N	\N	\N	\N	\N	\N	\N	\N	force_ended	\N	a1166982-3803-4093-aa6d-04c2c8976ee5	d	f	2026-03-31 15:43:02.12005+07	2026-03-31 21:30:39.447375+07
 \.
-
-
---
--- Data for Name: pricing_configs; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.pricing_configs (config_id, lot_id, time_slot_name, start_hour, end_hour, price_per_hour, minimum_fee, is_active, created_at, updated_at) FROM stdin;
 ddcfe221-b89c-4a8c-816b-ff2c40d38a7c	c9f3967e-15ce-4010-8376-fac0ff9bacf3	Ban ngày	6	22	5000.00	2000.00	t	2026-03-31 14:36:19.334925+07	2026-03-31 14:36:19.334925+07
 646566a5-afc0-451f-93a4-6787b2051a20	c9f3967e-15ce-4010-8376-fac0ff9bacf3	Ban đêm	22	6	3000.00	2000.00	t	2026-03-31 14:36:19.334925+07	2026-03-31 14:36:19.334925+07
 \.
-
-
---
--- Data for Name: refresh_tokens; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.refresh_tokens (token_id, user_id, token_hash, device_info, ip_address, expires_at, revoked_at, created_at) FROM stdin;
 a7438681-29d3-4593-bc78-79b6b664bc06	a1b2c3d4-0000-0000-0000-000000000002	48a3a99cb0c0c4560ccee2f8b25011c911961baa32e0fe4a69dda8538abcc7c0	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36	::1	2026-03-31 22:55:50.606717+07	2026-03-31 14:56:51.83898+07	2026-03-31 14:55:50.606717+07
 02623ac1-440b-4fd4-958c-130f83f3073f	53052b34-17a0-4025-b905-c4651533fbbd	aff342a31e785d7d1163c14738094de4cf2b6ff78768b8132a1aba240c92b809	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36	::1	2026-03-31 23:02:53.545238+07	2026-03-31 15:06:02.007653+07	2026-03-31 15:02:53.545238+07
@@ -1028,36 +645,12 @@ a7438681-29d3-4593-bc78-79b6b664bc06	a1b2c3d4-0000-0000-0000-000000000002	48a3a9
 7f8725bc-01d1-4091-a0b8-d1921cc3d61d	4ac3b376-d797-4bed-863c-e1a4288b5e44	747bb1d68b7f49abaf9650b27611055fc19fb814878bf1e88d60e6c9b5794c47	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36	::1	2026-04-01 05:04:14.795764+07	\N	2026-03-31 21:04:14.795764+07
 8ce5c962-4f72-47ae-a107-6a5d8670ff1a	cb3be902-5237-4b0d-bd6b-adb839a64ab6	88876fa8b652fd764f8b6f010983e250c57c1d6d5635196991048008ed05da96	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36	::1	2026-04-02 04:33:56.634349+07	2026-04-01 21:07:53.127348+07	2026-04-01 20:33:56.634349+07
 \.
-
-
---
--- Data for Name: report_exports; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.report_exports (export_id, admin_id, lot_id, report_type, date_from, date_to, file_format, file_path, file_size_bytes, status, created_at, completed_at) FROM stdin;
 \.
-
-
---
--- Data for Name: sync_queue; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.sync_queue (queue_id, lot_id, entity_type, entity_id, operation, payload, status, retry_count, last_error, created_at, synced_at) FROM stdin;
 \.
-
-
---
--- Data for Name: system_alerts; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.system_alerts (alert_id, lot_id, alert_type, severity, title, description, related_device_id, related_user_id, related_session_id, status, resolved_by, resolved_at, resolution_note, created_at) FROM stdin;
 \.
-
-
---
--- Data for Name: system_configs; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.system_configs (config_key, config_value, data_type, description, updated_by, updated_at) FROM stdin;
 low_balance_default_threshold	50000	decimal	Ngưỡng số dư thấp mặc định (VND)	\N	2026-03-31 14:36:19.334925+07
 max_parking_hours_alert	24	integer	Số giờ tối đa trước khi đánh dấu phiên bất thường	\N	2026-03-31 14:36:19.334925+07
@@ -1069,21 +662,9 @@ offline_sync_retry_interval_s	30	integer	Chu kỳ thử đồng bộ lại khi c
 guest_session_code_prefix	GX	string	Tiền tố mã phiên khách vãng lai	\N	2026-03-31 14:36:19.334925+07
 monthly_pass_price	200000	integer	Giá vé tháng gửi xe (VND/tháng/xe)	\N	2026-03-31 20:58:00.876638+07
 \.
-
-
---
--- Data for Name: user_face_images; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.user_face_images (image_id, user_id, image_path, status, embedding_id, note, created_at, updated_at) FROM stdin;
 f7d46258-a026-4c67-9627-f17c0a86fb64	cb3be902-5237-4b0d-bd6b-adb839a64ab6	faces/cb3be902-5237-4b0d-bd6b-adb839a64ab6/1774963532911.jpg	pending	\N	\N	2026-03-31 20:25:32.91588+07	2026-03-31 20:25:32.91588+07
 \.
-
-
---
--- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.users (user_id, full_name, phone_number, email, password_hash, avatar_path, is_active, is_verified, created_at, updated_at) FROM stdin;
 a1b2c3d4-0000-0000-0000-000000000001	Nguyễn Văn An	0901234567	\N	$2a$12$m.hOBc96iJ0o1oWZoAQmDur6kUcMcc5xNoYZAuSCm1F0w43ARUApq	\N	t	t	2026-03-31 14:40:54.809692+07	2026-03-31 14:40:54.809692+07
 a1b2c3d4-0000-0000-0000-000000000002	Trần Thị Bình	0912345678	\N	$2a$12$Z7YgamJwsasQjmTV/86/p.3J.cB8DlDwF8PfF6BIlxzKvFFTagPxO	\N	t	f	2026-03-31 14:40:54.809692+07	2026-03-31 14:40:54.809692+07
@@ -1091,12 +672,6 @@ a1b2c3d4-0000-0000-0000-000000000002	Trần Thị Bình	0912345678	\N	$2a$12$Z7Y
 cb3be902-5237-4b0d-bd6b-adb839a64ab6	Nguyễn Trung Hiếu	0862152328	\N	$2a$12$g1B34qhbr1bd7PtXAyNuUuQO6ZrXKOXS5pZXAhRuB5nWZO1GCHNj.	\N	t	f	2026-03-31 14:57:10.932641+07	2026-03-31 15:15:12.808483+07
 4ac3b376-d797-4bed-863c-e1a4288b5e44	Ngô Quang Hào	0376783065	\N	$2a$12$..M8RF6NovebQt/cVNTfL.OgcmCxd/.Oh26wunhxP.xrd4UmAVgeK	\N	t	f	2026-03-31 21:00:43.083741+07	2026-04-01 20:57:03.284186+07
 \.
-
-
---
--- Data for Name: vehicles; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.vehicles (vehicle_id, user_id, license_plate, plate_image_path, nickname, is_active, created_at, updated_at) FROM stdin;
 b1b2c3d4-0000-0000-0000-000000000001	a1b2c3d4-0000-0000-0000-000000000001	29B1-12345	\N	Xe đi làm	t	2026-03-31 14:40:54.809692+07	2026-03-31 14:40:54.809692+07
 b1b2c3d4-0000-0000-0000-000000000002	a1b2c3d4-0000-0000-0000-000000000001	30A-98765	\N	Xe của vợ	t	2026-03-31 14:40:54.809692+07	2026-03-31 14:40:54.809692+07
@@ -1105,12 +680,6 @@ b1b2c3d4-0000-0000-0000-000000000003	a1b2c3d4-0000-0000-0000-000000000002	51F-11
 760d4f58-a0b3-44d5-80a4-c05a4f1bbbdc	cb3be902-5237-4b0d-bd6b-adb839a64ab6	15AL-04344	\N	Xe hào chó	t	2026-03-31 20:58:57.767758+07	2026-03-31 20:58:57.767758+07
 9ee45aec-6165-4909-86bf-0536028aba11	4ac3b376-d797-4bed-863c-e1a4288b5e44	15AN-04434	\N	Xe xích lô 	t	2026-03-31 21:03:08.826416+07	2026-03-31 21:03:17.570144+07
 \.
-
-
---
--- Data for Name: wallet_transactions; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.wallet_transactions (transaction_id, wallet_id, user_id, transaction_type, amount, balance_before, balance_after, payment_gateway, gateway_transaction_id, gateway_reference_code, gateway_response_code, parking_session_id, status, description, created_at, updated_at) FROM stdin;
 a9eb026b-d848-4cc8-8452-66ef3d38e601	d7081620-2580-4986-b69d-79f96d3b0d7d	a1b2c3d4-0000-0000-0000-000000000001	topup	200000.00	0.00	200000.00	momo	\N	\N	\N	\N	success	Nạp tiền lần đầu	2026-03-31 14:40:54.809692+07	2026-03-31 14:40:54.809692+07
 e54d7561-f44f-42d5-872f-67b61d603e0a	d7081620-2580-4986-b69d-79f96d3b0d7d	a1b2c3d4-0000-0000-0000-000000000001	deduct	10000.00	200000.00	190000.00	\N	\N	\N	\N	\N	success	Phí gửi xe 2 tiếng	2026-03-31 14:40:54.809692+07	2026-03-31 14:40:54.809692+07
@@ -1127,12 +696,6 @@ de71d42a-a8b4-4461-b0d9-6744f6ad0381	be0d69fd-3773-4a4f-b48a-ca25b4e0c8db	4ac3b3
 b20560e2-1543-490a-b208-a3a9d8439ce0	be0d69fd-3773-4a4f-b48a-ca25b4e0c8db	4ac3b376-d797-4bed-863c-e1a4288b5e44	topup	200000.00	100000.00	300000.00	momo	\N	\N	\N	\N	success	Nạp tiền vào ví	2026-03-31 21:04:40.667093+07	2026-03-31 21:04:40.667093+07
 8fd6112f-b249-43d8-9840-a00372db6e0a	8b30f9d8-fe95-437c-9f4e-bb2309acce45	cb3be902-5237-4b0d-bd6b-adb839a64ab6	topup	500000.00	0.00	500000.00	momo	\N	\N	\N	\N	success	Nạp tiền vào ví	2026-04-01 20:34:30.111126+07	2026-04-01 20:34:30.111126+07
 \.
-
-
---
--- Data for Name: wallets; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.wallets (wallet_id, user_id, balance, low_balance_threshold, updated_at) FROM stdin;
 d7081620-2580-4986-b69d-79f96d3b0d7d	a1b2c3d4-0000-0000-0000-000000000001	150000.00	50000.00	2026-03-31 14:40:54.809692+07
 8f5a64e8-0976-4928-bf36-3b1042311356	a1b2c3d4-0000-0000-0000-000000000002	80000.00	50000.00	2026-03-31 14:56:33.251346+07
@@ -1140,1093 +703,238 @@ d7081620-2580-4986-b69d-79f96d3b0d7d	a1b2c3d4-0000-0000-0000-000000000001	150000
 be0d69fd-3773-4a4f-b48a-ca25b4e0c8db	4ac3b376-d797-4bed-863c-e1a4288b5e44	300000.00	50000.00	2026-03-31 21:04:40.667093+07
 8b30f9d8-fe95-437c-9f4e-bb2309acce45	cb3be902-5237-4b0d-bd6b-adb839a64ab6	500000.00	50000.00	2026-04-01 20:34:30.111126+07
 \.
-
-
---
--- Data for Name: withdraw_requests; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 COPY public.withdraw_requests (request_id, user_id, amount, bank_name, bank_account, account_name, wallet_tx_id, status, admin_note, processed_by, processed_at, created_at, updated_at) FROM stdin;
 78fc409e-9f69-4912-800a-b538b3792477	4ac3b376-d797-4bed-863c-e1a4288b5e44	200000.00	BIDV	33737373	Nguyễn Trung Hiếu	de71d42a-a8b4-4461-b0d9-6744f6ad0381	pending	\N	\N	\N	2026-03-31 21:02:01.259218+07	2026-03-31 21:02:01.259218+07
 \.
-
-
---
--- Name: admin_sessions admin_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.admin_sessions
     ADD CONSTRAINT admin_sessions_pkey PRIMARY KEY (session_id);
-
-
---
--- Name: admin_sessions admin_sessions_token_hash_key; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.admin_sessions
     ADD CONSTRAINT admin_sessions_token_hash_key UNIQUE (token_hash);
-
-
---
--- Name: admins admins_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.admins
     ADD CONSTRAINT admins_email_key UNIQUE (email);
-
-
---
--- Name: admins admins_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.admins
     ADD CONSTRAINT admins_pkey PRIMARY KEY (admin_id);
-
-
---
--- Name: admins admins_username_key; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.admins
     ADD CONSTRAINT admins_username_key UNIQUE (username);
-
-
---
--- Name: authorizations authorizations_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.authorizations
     ADD CONSTRAINT authorizations_pkey PRIMARY KEY (auth_id);
-
-
---
--- Name: daily_reports daily_reports_lot_id_report_date_key; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.daily_reports
     ADD CONSTRAINT daily_reports_lot_id_report_date_key UNIQUE (lot_id, report_date);
-
-
---
--- Name: daily_reports daily_reports_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.daily_reports
     ADD CONSTRAINT daily_reports_pkey PRIMARY KEY (report_id);
-
-
---
--- Name: device_status_logs device_status_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.device_status_logs
     ADD CONSTRAINT device_status_logs_pkey PRIMARY KEY (log_id);
-
-
---
--- Name: devices devices_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.devices
     ADD CONSTRAINT devices_pkey PRIMARY KEY (device_id);
-
-
---
--- Name: event_logs event_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.event_logs
     ADD CONSTRAINT event_logs_pkey PRIMARY KEY (event_id);
-
-
---
--- Name: face_embeddings face_embeddings_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.face_embeddings
     ADD CONSTRAINT face_embeddings_pkey PRIMARY KEY (embedding_id);
-
-
---
--- Name: fcm_tokens fcm_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.fcm_tokens
     ADD CONSTRAINT fcm_tokens_pkey PRIMARY KEY (token_id);
-
-
---
--- Name: fcm_tokens fcm_tokens_user_id_token_key; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.fcm_tokens
     ADD CONSTRAINT fcm_tokens_user_id_token_key UNIQUE (user_id, token);
-
-
---
--- Name: guest_sessions guest_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.guest_sessions
     ADD CONSTRAINT guest_sessions_pkey PRIMARY KEY (session_id);
-
-
---
--- Name: guest_sessions guest_sessions_session_code_key; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.guest_sessions
     ADD CONSTRAINT guest_sessions_session_code_key UNIQUE (session_code);
-
-
---
--- Name: manual_overrides manual_overrides_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.manual_overrides
     ADD CONSTRAINT manual_overrides_pkey PRIMARY KEY (override_id);
-
-
---
--- Name: monthly_passes monthly_passes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.monthly_passes
     ADD CONSTRAINT monthly_passes_pkey PRIMARY KEY (pass_id);
-
-
---
--- Name: notifications notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.notifications
     ADD CONSTRAINT notifications_pkey PRIMARY KEY (notification_id);
-
-
---
--- Name: parking_lots parking_lots_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.parking_lots
     ADD CONSTRAINT parking_lots_pkey PRIMARY KEY (lot_id);
-
-
---
--- Name: parking_sessions parking_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.parking_sessions
     ADD CONSTRAINT parking_sessions_pkey PRIMARY KEY (session_id);
-
-
---
--- Name: pricing_configs pricing_configs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.pricing_configs
     ADD CONSTRAINT pricing_configs_pkey PRIMARY KEY (config_id);
-
-
---
--- Name: refresh_tokens refresh_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.refresh_tokens
     ADD CONSTRAINT refresh_tokens_pkey PRIMARY KEY (token_id);
-
-
---
--- Name: refresh_tokens refresh_tokens_token_hash_key; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.refresh_tokens
     ADD CONSTRAINT refresh_tokens_token_hash_key UNIQUE (token_hash);
-
-
---
--- Name: report_exports report_exports_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.report_exports
     ADD CONSTRAINT report_exports_pkey PRIMARY KEY (export_id);
-
-
---
--- Name: sync_queue sync_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.sync_queue
     ADD CONSTRAINT sync_queue_pkey PRIMARY KEY (queue_id);
-
-
---
--- Name: system_alerts system_alerts_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.system_alerts
     ADD CONSTRAINT system_alerts_pkey PRIMARY KEY (alert_id);
-
-
---
--- Name: system_configs system_configs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.system_configs
     ADD CONSTRAINT system_configs_pkey PRIMARY KEY (config_key);
-
-
---
--- Name: user_face_images user_face_images_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.user_face_images
     ADD CONSTRAINT user_face_images_pkey PRIMARY KEY (image_id);
-
-
---
--- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.users
     ADD CONSTRAINT users_email_key UNIQUE (email);
-
-
---
--- Name: users users_phone_number_key; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.users
     ADD CONSTRAINT users_phone_number_key UNIQUE (phone_number);
-
-
---
--- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.users
     ADD CONSTRAINT users_pkey PRIMARY KEY (user_id);
-
-
---
--- Name: vehicles vehicles_license_plate_key; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.vehicles
     ADD CONSTRAINT vehicles_license_plate_key UNIQUE (license_plate);
-
-
---
--- Name: vehicles vehicles_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.vehicles
     ADD CONSTRAINT vehicles_pkey PRIMARY KEY (vehicle_id);
-
-
---
--- Name: wallet_transactions wallet_transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.wallet_transactions
     ADD CONSTRAINT wallet_transactions_pkey PRIMARY KEY (transaction_id);
-
-
---
--- Name: wallets wallets_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.wallets
     ADD CONSTRAINT wallets_pkey PRIMARY KEY (wallet_id);
-
-
---
--- Name: wallets wallets_user_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.wallets
     ADD CONSTRAINT wallets_user_id_key UNIQUE (user_id);
-
-
---
--- Name: withdraw_requests withdraw_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.withdraw_requests
     ADD CONSTRAINT withdraw_requests_pkey PRIMARY KEY (request_id);
-
-
---
--- Name: idx_admin_sessions_admin; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_admin_sessions_admin ON public.admin_sessions USING btree (admin_id);
-
-
---
--- Name: idx_auth_active; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_auth_active ON public.authorizations USING btree (vehicle_id, is_active, auth_type);
-
-
---
--- Name: idx_auth_owner; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_auth_owner ON public.authorizations USING btree (owner_user_id);
-
-
---
--- Name: idx_auth_vehicle; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_auth_vehicle ON public.authorizations USING btree (vehicle_id);
-
-
---
--- Name: idx_daily_reports_lot_date; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_daily_reports_lot_date ON public.daily_reports USING btree (lot_id, report_date DESC);
-
-
---
--- Name: idx_device_status_logs_device; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_device_status_logs_device ON public.device_status_logs USING btree (device_id, logged_at DESC);
-
-
---
--- Name: idx_devices_lot; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_devices_lot ON public.devices USING btree (lot_id);
-
-
---
--- Name: idx_devices_type; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_devices_type ON public.devices USING btree (device_type);
-
-
---
--- Name: idx_event_logs_lot_time; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_event_logs_lot_time ON public.event_logs USING btree (lot_id, created_at DESC);
-
-
---
--- Name: idx_event_logs_plate; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_event_logs_plate ON public.event_logs USING btree (license_plate) WHERE (license_plate IS NOT NULL);
-
-
---
--- Name: idx_event_logs_session; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_event_logs_session ON public.event_logs USING btree (session_id) WHERE (session_id IS NOT NULL);
-
-
---
--- Name: idx_event_logs_type; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_event_logs_type ON public.event_logs USING btree (event_type, created_at DESC);
-
-
---
--- Name: idx_event_logs_user; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_event_logs_user ON public.event_logs USING btree (user_id, created_at DESC) WHERE (user_id IS NOT NULL);
-
-
---
--- Name: idx_face_embeddings_user; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_face_embeddings_user ON public.face_embeddings USING btree (user_id);
-
-
---
--- Name: idx_fcm_tokens_user; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_fcm_tokens_user ON public.fcm_tokens USING btree (user_id) WHERE (is_active = true);
-
-
---
--- Name: idx_guest_sessions_active; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_guest_sessions_active ON public.guest_sessions USING btree (status, lot_id) WHERE ((status)::text = 'active'::text);
-
-
---
--- Name: idx_guest_sessions_code; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_guest_sessions_code ON public.guest_sessions USING btree (session_code);
-
-
---
--- Name: idx_guest_sessions_plate; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_guest_sessions_plate ON public.guest_sessions USING btree (license_plate) WHERE (license_plate IS NOT NULL);
-
-
---
--- Name: idx_guest_sessions_synced; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_guest_sessions_synced ON public.guest_sessions USING btree (is_synced) WHERE (is_synced = false);
-
-
---
--- Name: idx_manual_overrides_admin; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_manual_overrides_admin ON public.manual_overrides USING btree (admin_id, executed_at DESC);
-
-
---
--- Name: idx_monthly_passes_active; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_monthly_passes_active ON public.monthly_passes USING btree (user_id, status) WHERE ((status)::text = 'active'::text);
-
-
---
--- Name: idx_monthly_passes_user; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_monthly_passes_user ON public.monthly_passes USING btree (user_id);
-
-
---
--- Name: idx_monthly_passes_vehicle; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_monthly_passes_vehicle ON public.monthly_passes USING btree (vehicle_id);
-
-
---
--- Name: idx_notifications_unread; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_notifications_unread ON public.notifications USING btree (user_id, is_read) WHERE (is_read = false);
-
-
---
--- Name: idx_notifications_user; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_notifications_user ON public.notifications USING btree (user_id, created_at DESC);
-
-
---
--- Name: idx_parking_sessions_active; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_parking_sessions_active ON public.parking_sessions USING btree (status, lot_id) WHERE ((status)::text = 'active'::text);
-
-
---
--- Name: idx_parking_sessions_plate; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_parking_sessions_plate ON public.parking_sessions USING btree (license_plate);
-
-
---
--- Name: idx_parking_sessions_synced; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_parking_sessions_synced ON public.parking_sessions USING btree (is_synced) WHERE (is_synced = false);
-
-
---
--- Name: idx_parking_sessions_user; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_parking_sessions_user ON public.parking_sessions USING btree (user_id, entry_time DESC);
-
-
---
--- Name: idx_parking_sessions_vehicle; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_parking_sessions_vehicle ON public.parking_sessions USING btree (vehicle_id, entry_time DESC);
-
-
---
--- Name: idx_pricing_lot; Type: INDEX; Schema: public; Owner: postgres
---
-
+CREATE INDEX idx_parking_sessions_plate_active ON public.parking_sessions USING btree (license_plate) WHERE ((status)::text = 'active'::text);
+CREATE INDEX idx_guest_sessions_plate_active ON public.guest_sessions USING btree (license_plate) WHERE ((status)::text = 'active'::text);
 CREATE INDEX idx_pricing_lot ON public.pricing_configs USING btree (lot_id, is_active);
-
-
---
--- Name: idx_refresh_tokens_user; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_refresh_tokens_user ON public.refresh_tokens USING btree (user_id);
-
-
---
--- Name: idx_sync_queue_pending; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_sync_queue_pending ON public.sync_queue USING btree (status, created_at) WHERE ((status)::text = ANY ((ARRAY['pending'::character varying, 'failed'::character varying])::text[]));
-
-
---
--- Name: idx_system_alerts_lot; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_system_alerts_lot ON public.system_alerts USING btree (lot_id, created_at DESC);
-
-
---
--- Name: idx_system_alerts_unresolved; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_system_alerts_unresolved ON public.system_alerts USING btree (status, severity, created_at DESC) WHERE ((status)::text = 'unresolved'::text);
-
-
---
--- Name: idx_user_face_images_pending; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_user_face_images_pending ON public.user_face_images USING btree (status) WHERE ((status)::text = 'pending'::text);
-
-
---
--- Name: idx_user_face_images_status; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_user_face_images_status ON public.user_face_images USING btree (status);
-
-
---
--- Name: idx_user_face_images_user; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_user_face_images_user ON public.user_face_images USING btree (user_id);
-
-
---
--- Name: idx_users_phone; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_users_phone ON public.users USING btree (phone_number);
-
-
---
--- Name: idx_vehicles_license_plate; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_vehicles_license_plate ON public.vehicles USING btree (license_plate);
-
-
---
--- Name: idx_vehicles_user; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_vehicles_user ON public.vehicles USING btree (user_id);
-
-
---
--- Name: idx_wallet_tx_gateway; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_wallet_tx_gateway ON public.wallet_transactions USING btree (gateway_transaction_id) WHERE (gateway_transaction_id IS NOT NULL);
-
-
---
--- Name: idx_wallet_tx_status; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_wallet_tx_status ON public.wallet_transactions USING btree (status) WHERE ((status)::text = 'pending'::text);
-
-
---
--- Name: idx_wallet_tx_user; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_wallet_tx_user ON public.wallet_transactions USING btree (user_id, created_at DESC);
-
-
---
--- Name: idx_wallet_tx_wallet; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_wallet_tx_wallet ON public.wallet_transactions USING btree (wallet_id, created_at DESC);
-
-
---
--- Name: idx_withdraw_requests_status; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_withdraw_requests_status ON public.withdraw_requests USING btree (status) WHERE ((status)::text = 'pending'::text);
-
-
---
--- Name: idx_withdraw_requests_user; Type: INDEX; Schema: public; Owner: postgres
---
-
 CREATE INDEX idx_withdraw_requests_user ON public.withdraw_requests USING btree (user_id, created_at DESC);
-
-
---
--- Name: users auto_create_wallet; Type: TRIGGER; Schema: public; Owner: postgres
---
-
 CREATE TRIGGER auto_create_wallet AFTER INSERT ON public.users FOR EACH ROW EXECUTE FUNCTION public.trigger_create_wallet_for_new_user();
-
-
---
--- Name: devices log_device_status; Type: TRIGGER; Schema: public; Owner: postgres
---
-
 CREATE TRIGGER log_device_status AFTER UPDATE ON public.devices FOR EACH ROW EXECUTE FUNCTION public.trigger_log_device_status_change();
-
-
---
--- Name: admins set_updated_at_admins; Type: TRIGGER; Schema: public; Owner: postgres
---
-
 CREATE TRIGGER set_updated_at_admins BEFORE UPDATE ON public.admins FOR EACH ROW EXECUTE FUNCTION public.trigger_set_updated_at();
-
-
---
--- Name: devices set_updated_at_devices; Type: TRIGGER; Schema: public; Owner: postgres
---
-
 CREATE TRIGGER set_updated_at_devices BEFORE UPDATE ON public.devices FOR EACH ROW EXECUTE FUNCTION public.trigger_set_updated_at();
-
-
---
--- Name: fcm_tokens set_updated_at_fcm_tokens; Type: TRIGGER; Schema: public; Owner: postgres
---
-
 CREATE TRIGGER set_updated_at_fcm_tokens BEFORE UPDATE ON public.fcm_tokens FOR EACH ROW EXECUTE FUNCTION public.trigger_set_updated_at();
-
-
---
--- Name: guest_sessions set_updated_at_guest_sessions; Type: TRIGGER; Schema: public; Owner: postgres
---
-
 CREATE TRIGGER set_updated_at_guest_sessions BEFORE UPDATE ON public.guest_sessions FOR EACH ROW EXECUTE FUNCTION public.trigger_set_updated_at();
-
-
---
--- Name: monthly_passes set_updated_at_monthly_passes; Type: TRIGGER; Schema: public; Owner: postgres
---
-
 CREATE TRIGGER set_updated_at_monthly_passes BEFORE UPDATE ON public.monthly_passes FOR EACH ROW EXECUTE FUNCTION public.trigger_set_updated_at();
-
-
---
--- Name: parking_lots set_updated_at_parking_lots; Type: TRIGGER; Schema: public; Owner: postgres
---
-
 CREATE TRIGGER set_updated_at_parking_lots BEFORE UPDATE ON public.parking_lots FOR EACH ROW EXECUTE FUNCTION public.trigger_set_updated_at();
-
-
---
--- Name: parking_sessions set_updated_at_parking_sessions; Type: TRIGGER; Schema: public; Owner: postgres
---
-
 CREATE TRIGGER set_updated_at_parking_sessions BEFORE UPDATE ON public.parking_sessions FOR EACH ROW EXECUTE FUNCTION public.trigger_set_updated_at();
-
-
---
--- Name: pricing_configs set_updated_at_pricing_configs; Type: TRIGGER; Schema: public; Owner: postgres
---
-
 CREATE TRIGGER set_updated_at_pricing_configs BEFORE UPDATE ON public.pricing_configs FOR EACH ROW EXECUTE FUNCTION public.trigger_set_updated_at();
-
-
---
--- Name: users set_updated_at_users; Type: TRIGGER; Schema: public; Owner: postgres
---
-
 CREATE TRIGGER set_updated_at_users BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION public.trigger_set_updated_at();
-
-
---
--- Name: vehicles set_updated_at_vehicles; Type: TRIGGER; Schema: public; Owner: postgres
---
-
 CREATE TRIGGER set_updated_at_vehicles BEFORE UPDATE ON public.vehicles FOR EACH ROW EXECUTE FUNCTION public.trigger_set_updated_at();
-
-
---
--- Name: wallet_transactions set_updated_at_wallet_transactions; Type: TRIGGER; Schema: public; Owner: postgres
---
-
 CREATE TRIGGER set_updated_at_wallet_transactions BEFORE UPDATE ON public.wallet_transactions FOR EACH ROW EXECUTE FUNCTION public.trigger_set_updated_at();
-
-
---
--- Name: wallets set_updated_at_wallets; Type: TRIGGER; Schema: public; Owner: postgres
---
-
 CREATE TRIGGER set_updated_at_wallets BEFORE UPDATE ON public.wallets FOR EACH ROW EXECUTE FUNCTION public.trigger_set_updated_at();
-
-
---
--- Name: withdraw_requests set_updated_at_withdraw_requests; Type: TRIGGER; Schema: public; Owner: postgres
---
-
 CREATE TRIGGER set_updated_at_withdraw_requests BEFORE UPDATE ON public.withdraw_requests FOR EACH ROW EXECUTE FUNCTION public.trigger_set_updated_at();
-
-
---
--- Name: user_face_images trg_face_images_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
---
-
 CREATE TRIGGER trg_face_images_updated_at BEFORE UPDATE ON public.user_face_images FOR EACH ROW EXECUTE FUNCTION public.update_face_images_updated_at();
-
-
---
--- Name: admin_sessions admin_sessions_admin_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.admin_sessions
     ADD CONSTRAINT admin_sessions_admin_id_fkey FOREIGN KEY (admin_id) REFERENCES public.admins(admin_id) ON DELETE CASCADE;
-
-
---
--- Name: authorizations authorizations_owner_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.authorizations
     ADD CONSTRAINT authorizations_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users(user_id) ON DELETE CASCADE;
-
-
---
--- Name: authorizations authorizations_vehicle_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.authorizations
     ADD CONSTRAINT authorizations_vehicle_id_fkey FOREIGN KEY (vehicle_id) REFERENCES public.vehicles(vehicle_id) ON DELETE CASCADE;
-
-
---
--- Name: daily_reports daily_reports_lot_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.daily_reports
     ADD CONSTRAINT daily_reports_lot_id_fkey FOREIGN KEY (lot_id) REFERENCES public.parking_lots(lot_id);
-
-
---
--- Name: device_status_logs device_status_logs_device_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.device_status_logs
     ADD CONSTRAINT device_status_logs_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(device_id) ON DELETE CASCADE;
-
-
---
--- Name: devices devices_lot_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.devices
     ADD CONSTRAINT devices_lot_id_fkey FOREIGN KEY (lot_id) REFERENCES public.parking_lots(lot_id);
-
-
---
--- Name: event_logs event_logs_admin_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.event_logs
     ADD CONSTRAINT event_logs_admin_id_fkey FOREIGN KEY (admin_id) REFERENCES public.admins(admin_id);
-
-
---
--- Name: event_logs event_logs_device_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.event_logs
     ADD CONSTRAINT event_logs_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(device_id);
-
-
---
--- Name: event_logs event_logs_lot_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.event_logs
     ADD CONSTRAINT event_logs_lot_id_fkey FOREIGN KEY (lot_id) REFERENCES public.parking_lots(lot_id);
-
-
---
--- Name: face_embeddings face_embeddings_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.face_embeddings
     ADD CONSTRAINT face_embeddings_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON DELETE CASCADE;
-
-
---
--- Name: fcm_tokens fcm_tokens_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.fcm_tokens
     ADD CONSTRAINT fcm_tokens_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON DELETE CASCADE;
-
-
---
--- Name: manual_overrides manual_overrides_admin_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.manual_overrides
     ADD CONSTRAINT manual_overrides_admin_id_fkey FOREIGN KEY (admin_id) REFERENCES public.admins(admin_id);
-
-
---
--- Name: manual_overrides manual_overrides_device_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.manual_overrides
     ADD CONSTRAINT manual_overrides_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(device_id);
-
-
---
--- Name: manual_overrides manual_overrides_lot_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.manual_overrides
     ADD CONSTRAINT manual_overrides_lot_id_fkey FOREIGN KEY (lot_id) REFERENCES public.parking_lots(lot_id);
-
-
---
--- Name: monthly_passes monthly_passes_lot_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.monthly_passes
     ADD CONSTRAINT monthly_passes_lot_id_fkey FOREIGN KEY (lot_id) REFERENCES public.parking_lots(lot_id) ON DELETE CASCADE;
-
-
---
--- Name: monthly_passes monthly_passes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.monthly_passes
     ADD CONSTRAINT monthly_passes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON DELETE CASCADE;
-
-
---
--- Name: monthly_passes monthly_passes_vehicle_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.monthly_passes
     ADD CONSTRAINT monthly_passes_vehicle_id_fkey FOREIGN KEY (vehicle_id) REFERENCES public.vehicles(vehicle_id) ON DELETE CASCADE;
-
-
---
--- Name: monthly_passes monthly_passes_wallet_tx_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.monthly_passes
     ADD CONSTRAINT monthly_passes_wallet_tx_id_fkey FOREIGN KEY (wallet_tx_id) REFERENCES public.wallet_transactions(transaction_id) ON DELETE SET NULL;
-
-
---
--- Name: notifications notifications_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.notifications
     ADD CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON DELETE CASCADE;
-
-
---
--- Name: parking_sessions parking_sessions_auth_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.parking_sessions
     ADD CONSTRAINT parking_sessions_auth_id_fkey FOREIGN KEY (auth_id) REFERENCES public.authorizations(auth_id);
-
-
---
--- Name: parking_sessions parking_sessions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.parking_sessions
     ADD CONSTRAINT parking_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id);
-
-
---
--- Name: parking_sessions parking_sessions_vehicle_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.parking_sessions
     ADD CONSTRAINT parking_sessions_vehicle_id_fkey FOREIGN KEY (vehicle_id) REFERENCES public.vehicles(vehicle_id);
-
-
---
--- Name: parking_sessions parking_sessions_wallet_transaction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.parking_sessions
     ADD CONSTRAINT parking_sessions_wallet_transaction_id_fkey FOREIGN KEY (wallet_transaction_id) REFERENCES public.wallet_transactions(transaction_id);
-
-
---
--- Name: pricing_configs pricing_configs_lot_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
+ALTER TABLE ONLY public.parking_sessions
+    ADD CONSTRAINT parking_sessions_entry_device_id_fkey FOREIGN KEY (entry_device_id) REFERENCES public.devices(device_id);
+ALTER TABLE ONLY public.parking_sessions
+    ADD CONSTRAINT parking_sessions_exit_device_id_fkey FOREIGN KEY (exit_device_id) REFERENCES public.devices(device_id);
+ALTER TABLE ONLY public.guest_sessions
+    ADD CONSTRAINT guest_sessions_entry_device_id_fkey FOREIGN KEY (entry_device_id) REFERENCES public.devices(device_id);
+ALTER TABLE ONLY public.guest_sessions
+    ADD CONSTRAINT guest_sessions_exit_device_id_fkey FOREIGN KEY (exit_device_id) REFERENCES public.devices(device_id);
 ALTER TABLE ONLY public.pricing_configs
     ADD CONSTRAINT pricing_configs_lot_id_fkey FOREIGN KEY (lot_id) REFERENCES public.parking_lots(lot_id) ON DELETE CASCADE;
-
-
---
--- Name: refresh_tokens refresh_tokens_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.refresh_tokens
     ADD CONSTRAINT refresh_tokens_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON DELETE CASCADE;
-
-
---
--- Name: report_exports report_exports_admin_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.report_exports
     ADD CONSTRAINT report_exports_admin_id_fkey FOREIGN KEY (admin_id) REFERENCES public.admins(admin_id);
-
-
---
--- Name: report_exports report_exports_lot_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.report_exports
     ADD CONSTRAINT report_exports_lot_id_fkey FOREIGN KEY (lot_id) REFERENCES public.parking_lots(lot_id);
-
-
---
--- Name: sync_queue sync_queue_lot_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.sync_queue
     ADD CONSTRAINT sync_queue_lot_id_fkey FOREIGN KEY (lot_id) REFERENCES public.parking_lots(lot_id);
-
-
---
--- Name: system_alerts system_alerts_lot_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.system_alerts
     ADD CONSTRAINT system_alerts_lot_id_fkey FOREIGN KEY (lot_id) REFERENCES public.parking_lots(lot_id);
-
-
---
--- Name: system_alerts system_alerts_related_device_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.system_alerts
     ADD CONSTRAINT system_alerts_related_device_id_fkey FOREIGN KEY (related_device_id) REFERENCES public.devices(device_id);
-
-
---
--- Name: system_alerts system_alerts_resolved_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.system_alerts
     ADD CONSTRAINT system_alerts_resolved_by_fkey FOREIGN KEY (resolved_by) REFERENCES public.admins(admin_id);
-
-
---
--- Name: system_configs system_configs_updated_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.system_configs
     ADD CONSTRAINT system_configs_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.admins(admin_id);
-
-
---
--- Name: user_face_images user_face_images_embedding_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.user_face_images
     ADD CONSTRAINT user_face_images_embedding_id_fkey FOREIGN KEY (embedding_id) REFERENCES public.face_embeddings(embedding_id) ON DELETE SET NULL;
-
-
---
--- Name: user_face_images user_face_images_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.user_face_images
     ADD CONSTRAINT user_face_images_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON DELETE CASCADE;
-
-
---
--- Name: vehicles vehicles_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.vehicles
     ADD CONSTRAINT vehicles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON DELETE CASCADE;
-
-
---
--- Name: wallet_transactions wallet_transactions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.wallet_transactions
     ADD CONSTRAINT wallet_transactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id);
-
-
---
--- Name: wallet_transactions wallet_transactions_wallet_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.wallet_transactions
     ADD CONSTRAINT wallet_transactions_wallet_id_fkey FOREIGN KEY (wallet_id) REFERENCES public.wallets(wallet_id);
-
-
---
--- Name: wallets wallets_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.wallets
     ADD CONSTRAINT wallets_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON DELETE CASCADE;
-
-
---
--- Name: withdraw_requests withdraw_requests_processed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.withdraw_requests
     ADD CONSTRAINT withdraw_requests_processed_by_fkey FOREIGN KEY (processed_by) REFERENCES public.admins(admin_id);
-
-
---
--- Name: withdraw_requests withdraw_requests_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.withdraw_requests
     ADD CONSTRAINT withdraw_requests_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON DELETE CASCADE;
-
-
---
--- Name: withdraw_requests withdraw_requests_wallet_tx_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.withdraw_requests
     ADD CONSTRAINT withdraw_requests_wallet_tx_id_fkey FOREIGN KEY (wallet_tx_id) REFERENCES public.wallet_transactions(transaction_id) ON DELETE SET NULL;
-
-
---
--- PostgreSQL database dump complete
---
-
 \unrestrict BxkE3TZKHOKShbTCKahYnTUa35HtVX10g0VLhQxz4U4xBrO77HVkQ8hLW3qWbEu
-

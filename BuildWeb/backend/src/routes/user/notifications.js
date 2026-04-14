@@ -2,7 +2,6 @@ const router = require('express').Router();
 const userAuth = require('../../middleware/userAuth');
 const { pool } = require('../../db');
 
-// GET /api/user/notifications?page=1&limit=20
 router.get('/', userAuth, async (req, res, next) => {
   try {
     const { page = 1, limit = 20 } = req.query;
@@ -35,7 +34,6 @@ router.get('/', userAuth, async (req, res, next) => {
   }
 });
 
-// PATCH /api/user/notifications/:id/read
 router.patch('/:id/read', userAuth, async (req, res, next) => {
   try {
     const result = await pool.query(
@@ -51,7 +49,6 @@ router.patch('/:id/read', userAuth, async (req, res, next) => {
   }
 });
 
-// PATCH /api/user/notifications/read-all
 router.patch('/read-all', userAuth, async (req, res, next) => {
   try {
     await pool.query(

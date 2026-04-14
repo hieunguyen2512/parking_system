@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useStore } from '../store/useStore'
 import { AlertTriangle, AlertCircle, Info, CheckCircle2, X, Filter } from 'lucide-react'
 import clsx from 'clsx'
@@ -20,10 +20,17 @@ const TypeLabel = {
 const fmtTime = d => new Date(d).toLocaleString('vi-VN', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })
 
 export default function Alerts() {
-  const { alerts, resolveAlert } = useStore()
+  const { alerts, resolveAlert, fetchAlerts } = useStore()
   const [filter, setFilter] = useState('unresolved')
   const [resolveModal, setResolveModal] = useState(null)
   const [resolveNote, setResolveNote] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchAlerts().finally(() => setLoading(false))
+    const t = setInterval(() => fetchAlerts(), 30000)
+    return () => clearInterval(t)
+  }, [])
 
   const shown = alerts.filter(a => {
     if (filter === 'unresolved') return !a.is_resolved
@@ -45,7 +52,7 @@ export default function Alerts() {
 
   return (
     <div className="space-y-5">
-      {/* Summary */}
+      {}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-center gap-4">
           <AlertCircle size={24} className="text-rose-600 shrink-0" />
@@ -70,7 +77,7 @@ export default function Alerts() {
         </div>
       </div>
 
-      {/* Filter */}
+      {}
       <div className="flex items-center gap-2">
         <Filter size={15} className="text-gray-400" />
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
@@ -93,9 +100,15 @@ export default function Alerts() {
         <span className="ml-2 text-sm text-gray-500">{shown.length} cảnh báo</span>
       </div>
 
-      {/* Alert list */}
+      {}
       <div className="space-y-3">
-        {shown.map(a => {
+        {loading && (
+          <div className="text-center py-16 text-gray-400">
+            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-sm">Đang tải cảnh báo...</p>
+          </div>
+        )}
+        {!loading && shown.map(a => {
           const cfg = SeverityCfg[a.severity] ?? SeverityCfg.info
           const { Icon } = cfg
           return (
@@ -136,7 +149,7 @@ export default function Alerts() {
           )
         })}
 
-        {shown.length === 0 && (
+        {!loading && shown.length === 0 && (
           <div className="text-center py-16 text-gray-400">
             <CheckCircle2 size={40} className="mx-auto mb-3 text-emerald-300" />
             <p className="font-medium">Không có cảnh báo nào trong mục này</p>
@@ -144,7 +157,7 @@ export default function Alerts() {
         )}
       </div>
 
-      {/* Resolve Modal */}
+      {}
       {resolveModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">

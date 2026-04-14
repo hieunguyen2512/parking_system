@@ -18,7 +18,6 @@ const accentCfg = {
   rose:   { ring: "ring-rose-500",   badge: "bg-rose-700",   dot: "bg-rose-400",   grad: "from-rose-900/80"   },
 }
 
-// ══ Device type icon ══════════════════════════════════════════════════════════
 function DeviceTypeIcon({ type }) {
   const p = { size: 13, className: "shrink-0 text-gray-400" }
   switch (type) {
@@ -31,7 +30,6 @@ function DeviceTypeIcon({ type }) {
   }
 }
 
-// ══ Status badge ══════════════════════════════════════════════════════════════
 const STATUS_CFG = {
   online:      { cls: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30", dot: "bg-emerald-500 animate-pulse" },
   offline:     { cls: "bg-slate-200/80   text-slate-500   border-slate-300/50",   dot: "bg-slate-400"                },
@@ -48,7 +46,6 @@ function StatusBadge({ status }) {
   )
 }
 
-// ══ Device list per lane ═════════════════════════════════════════════════════
 function DeviceListPanel({ lane, devices, loading }) {
   const title = lane === "entry" ? "🔵 Thiết bị – Lối vào" : "🟠 Thiết bị – Lối ra"
   const rows = devices.filter(d => d.lane === lane || d.lane === "both")
@@ -80,18 +77,15 @@ function DeviceListPanel({ lane, devices, loading }) {
   )
 }
 
-// ══ Camera Assignment Panel ══════════════════════════════════════════════════
 function CamAssignPanel({ assignment, onSaved }) {
   const [open,    setOpen]    = useState(false)
   const [draft,   setDraft]   = useState(assignment)
-  const [cameras, setCameras] = useState([])   // [{index, width, height}]
+  const [cameras, setCameras] = useState([])
   const [saving,  setSaving]  = useState(false)
-  const [msg,     setMsg]     = useState(null)  // {ok, text}
+  const [msg,     setMsg]     = useState(null)
 
-  // Sync draft khi assignment bên ngoài thay đổi
   useEffect(() => { setDraft(assignment) }, [assignment])
 
-  // Tải danh sách camera khi mở panel
   useEffect(() => {
     if (!open) return
     fetch(`${AI_URL}/cameras`, { signal: AbortSignal.timeout(3000) })
@@ -135,7 +129,7 @@ function CamAssignPanel({ assignment, onSaved }) {
     const c = cameras.find(x => x.index === idx)
     return c ? `cam ${idx}  (${c.width}×${c.height})` : `cam ${idx}`
   }
-  // Tất cả index có thể chọn = union(camera phát hiện, 0..5)
+
   const allIndices = [...new Set([...cameras.map(c => c.index), 0, 1, 2, 3, 4, 5])].sort((a, b) => a - b)
 
   return (
@@ -191,7 +185,6 @@ function CamAssignPanel({ assignment, onSaved }) {
   )
 }
 
-// ══ Per-gate state + event log + barrier controls ════════════════════════════
 const GATE_STATE_CFG = {
   idle:       { bg: "bg-slate-700/80",   icon: null,                                                           label: "Đang chờ xe…",       cls: "text-slate-300" },
   detecting:  { bg: "bg-amber-800/80",   icon: <Activity size={13} className="text-amber-300 animate-pulse"/>, label: "Phát hiện xe…",      cls: "text-amber-200" },
@@ -288,14 +281,14 @@ function GateColumn({ gate, assignment, dispatchRef, onSend }) {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Gate header */}
+      {}
       <div className={`flex items-center px-3 py-1.5 rounded-xl text-xs font-bold
         ${isEntry ? "bg-blue-900/30 text-blue-300 border border-blue-800/40"
                   : "bg-amber-900/30 text-amber-300 border border-amber-800/40"}`}>
         {gateLabel}
       </div>
 
-      {/* Two cameras side by side */}
+      {}
       <div className="grid grid-cols-2 gap-2" style={{ minHeight: "22vh" }}>
         <CameraBox camIndex={camP} label={isEntry ? "Biển số vào" : "Biển số ra"}
           accent={accent1} resultType="plate" result={plateResult}
@@ -305,14 +298,14 @@ function GateColumn({ gate, assignment, dispatchRef, onSend }) {
           fullscreen={fullF} onToggleFullscreen={() => setFullF(p => !p)} />
       </div>
 
-      {/* State banner */}
+      {}
       <div className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-colors duration-300 ${stateCfg.bg}`}>
         {stateCfg.icon}
         <span className={`text-xs ${stateCfg.cls}`}>{stateCfg.label}</span>
         {stateMsg && <span className="text-white/60 text-[11px] font-mono truncate">{stateMsg}</span>}
       </div>
 
-      {/* Barrier buttons */}
+      {}
       <div className="grid grid-cols-2 gap-2">
         <button onClick={() => onSend(JSON.stringify({ type: "OPEN_BARRIER",  gate }))}
           className="flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-semibold
@@ -326,7 +319,7 @@ function GateColumn({ gate, assignment, dispatchRef, onSend }) {
         </button>
       </div>
 
-      {/* Event log */}
+      {}
       <div className="bg-gray-950 rounded-xl border border-gray-800 overflow-hidden flex flex-col" style={{ maxHeight: "22vh" }}>
         <div className="px-3 py-1.5 border-b border-gray-800 flex items-center justify-between shrink-0">
           <span className="text-[11px] font-medium text-gray-400">Sự kiện gần đây</span>
@@ -352,14 +345,11 @@ function GateColumn({ gate, assignment, dispatchRef, onSend }) {
   )
 }
 
-// ══ CameraBox ════════════════════════════════════════════════════════════════
-// Dùng MJPEG stream trực tiếp thay vì poll /capture – ~30 FPS, không overhead HTTP
 function CameraBox({ camIndex, label, accent, resultType, result, fullscreen, onToggleFullscreen }) {
   const [online, setOnline] = useState(false)
   const [retryKey, setRetryKey] = useState(0)
   const ac = accentCfg[accent]
 
-  // Tự retry sau 4s khi mất kết nối
   useEffect(() => {
     if (online) return
     const t = setTimeout(() => setRetryKey(k => k + 1), 4000)
@@ -425,7 +415,7 @@ function CameraBox({ camIndex, label, accent, resultType, result, fullscreen, on
       </div>
       <Overlay />
       <div className="flex-1 relative min-h-0 bg-gray-950">
-        {/* MJPEG stream – browser tự cập nhật frame liên tục ~30fps */}
+        {}
         <img
           key={retryKey}
           src={`${AI_URL}/stream/${camIndex}`}
@@ -451,7 +441,6 @@ function CameraBox({ camIndex, label, accent, resultType, result, fullscreen, on
   )
 }
 
-// ══ Trang chính ══════════════════════════════════════════════════════════════
 export default function Devices() {
   const [devices,        setDevices]        = useState([])
   const [loadingDevices, setLoadingDevices] = useState(true)
@@ -460,9 +449,8 @@ export default function Devices() {
   const [aiOnline,       setAiOnline]       = useState(false)
 
   const wsRef       = useRef(null)
-  const dispatchRef = useRef({})   // { entry: fn, exit: fn }
+  const dispatchRef = useRef({})
 
-  // Load devices (refresh every 15s)
   useEffect(() => {
     setLoadingDevices(true)
     devicesApi.list().then(setDevices).catch(() => setDevices([])).finally(() => setLoadingDevices(false))
@@ -470,7 +458,6 @@ export default function Devices() {
     return () => clearInterval(t)
   }, [])
 
-  // Camera assignment from AI service
   useEffect(() => {
     fetch(`${AI_URL}/cameras/assignment`, { signal: AbortSignal.timeout(3000) })
       .then(r => r.ok ? r.json() : null)
@@ -478,7 +465,6 @@ export default function Devices() {
       .catch(() => {})
   }, [])
 
-  // AI health ping
   useEffect(() => {
     let alive = true
     const ping = async () => {
@@ -489,7 +475,6 @@ export default function Devices() {
     return () => { alive = false; clearInterval(t) }
   }, [])
 
-  // Bridge WebSocket – shared, dispatches to per-gate handlers
   useEffect(() => {
     let ws = null; let retry = null; let destroyed = false
     function connect() {
@@ -518,7 +503,7 @@ export default function Devices() {
         } catch {}
       }
     }
-    // Delay nhỏ để tránh React 18 StrictMode double-invoke đóng WS trước khi kịp OPEN
+
     retry = setTimeout(connect, 100)
     return () => {
       destroyed = true
@@ -535,7 +520,7 @@ export default function Devices() {
   return (
     <div className="flex flex-col gap-4 h-full overflow-y-auto pb-4">
 
-      {/* Header */}
+      {}
       <div className="flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center">
@@ -559,13 +544,13 @@ export default function Devices() {
         </div>
       </div>
 
-      {/* Device lists */}
+      {}
       <div className="grid grid-cols-2 gap-4 shrink-0">
         <DeviceListPanel lane="entry" devices={devices} loading={loadingDevices} />
         <DeviceListPanel lane="exit"  devices={devices} loading={loadingDevices} />
       </div>
 
-      {/* Dual gate monitor */}
+      {}
       <div className="grid grid-cols-2 gap-4">
         <GateColumn gate="entry" assignment={assignment} dispatchRef={dispatchRef} onSend={sendWs} />
         <GateColumn gate="exit"  assignment={assignment} dispatchRef={dispatchRef} onSend={sendWs} />

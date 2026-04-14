@@ -1,14 +1,4 @@
-/**
- * SerialHandler – quản lý kết nối serial với 2 Arduino
- *
- * Sự kiện emit:
- *   'entry:detected'   – HYSRF05 cổng vào phát hiện xe
- *   'entry:clear'      – HYSRF05 cổng vào không còn xe
- *   'exit:detected'    – HYSRF05 cổng ra phát hiện xe
- *   'exit:clear'       – HYSRF05 cổng ra không còn xe
- *   'connected'        – Arduino kết nối thành công
- *   'disconnected'     – Arduino mất kết nối
- */
+
 
 const { SerialPort }         = require('serialport');
 const EventEmitter           = require('events');
@@ -24,7 +14,6 @@ class SerialHandler extends EventEmitter {
     this._exitReady  = false;
   }
 
-  // ── Kết nối ──────────────────────────────────────────────────────────────
   connect() {
     const entryPort = resolvePort('entry', cfg.ENTRY_SERIAL_NUMBER, cfg.ENTRY_SERIAL_PORT);
     const exitPort  = resolvePort('exit',  cfg.EXIT_SERIAL_NUMBER,  cfg.EXIT_SERIAL_PORT);
@@ -40,10 +29,9 @@ class SerialHandler extends EventEmitter {
       rtscts:   false,
       xon:      false,
       xoff:     false,
-      hupcl:    false,   // giữ DTR=high khi đóng → Arduino không reset
+      hupcl:    false,
     });
 
-    // Manual line buffer thay vì ReadlineParser (tránh lỗi pipe() trên Windows USB CDC)
     let _lineBuf = '';
     const self = this;
     port.on('data', (chunk) => {
@@ -62,7 +50,7 @@ class SerialHandler extends EventEmitter {
         const serialNum = gate === 'entry' ? cfg.ENTRY_SERIAL_NUMBER : cfg.EXIT_SERIAL_NUMBER;
         const fallback  = gate === 'entry' ? cfg.ENTRY_SERIAL_PORT   : cfg.EXIT_SERIAL_PORT;
         setTimeout(() => {
-          // Thử tìm lại COM port qua serial number (có thể đã đổi sau khi replug)
+
           const retryPath = resolvePort(gate, serialNum, fallback);
           this._openPort(gate, retryPath);
         }, 5000);
@@ -70,18 +58,14 @@ class SerialHandler extends EventEmitter {
       }
       console.log(`[Serial:${gate}] Kết nối ${path} thành công`);
 
-      // Force reset Arduino bằng cách toggle DTR: LOW→HIGH (giống Arduino IDE khi upload)
-      // DTR LOW = kéo RESET pin xuống → Arduino reset
-      // DTR HIGH = thả RESET pin → Arduino boot
       port.set({ dtr: false, rts: false }, () => {
         setTimeout(() => {
           port.set({ dtr: true, rts: true }, (e) => {
             if (e) console.warn(`[Serial:${gate}] set DTR high:`, e.message);
           });
-        }, 150);  // giữ LOW 150ms (đủ để trigger reset)
+        }, 150);
       });
 
-      // Gửi PING sau 2.5s (150ms reset delay + 2s Arduino boot time)
       const _doPing = () => {
         if (!port.isOpen) return;
         port.write('PING\n');
@@ -89,7 +73,6 @@ class SerialHandler extends EventEmitter {
       };
       setTimeout(_doPing, 2500);
 
-      // Retry PING mỗi 10s nếu chưa nhận được READY/PONG
       const _pingInterval = setInterval(() => {
         if (!port.isOpen) { clearInterval(_pingInterval); return; }
         const ready = gate === 'entry' ? this._entryReady : this._exitReady;
@@ -120,9 +103,8 @@ class SerialHandler extends EventEmitter {
     else                  this._exitPort  = port;
   }
 
-  // ── Xử lý line nhận từ Arduino ───────────────────────────────────────────
   _handleLine(gate, line) {
-    if (!line) return;  // bỏ qua dòng trống
+    if (!line) return;
     console.log(`[Serial:${gate}] <<< ${line}`);
 
     if (line === `READY:${gate.toUpperCase()}_GATE`) {
@@ -144,7 +126,7 @@ class SerialHandler extends EventEmitter {
 
     if (line === 'PONG') {
       console.log(`[Serial:${gate}] Arduino ALIVE – PING OK`);
-      // Đánh dấu ready nếu chưa nhận được READY:GATE (Arduino đã chạy sẵn trước khi bridge kết nối)
+
       if (gate === 'entry' && !this._entryReady) {
         this._entryReady = true;
         this.emit('connected', gate);
@@ -154,10 +136,9 @@ class SerialHandler extends EventEmitter {
       }
       return;
     }
-    // STATUS:BARRIER:* và các message khác – chỉ log
+
   }
 
-  // ── Gửi lệnh xuống Arduino ───────────────────────────────────────────────
   _send(gate, cmd) {
     const port = gate === 'entry' ? this._entryPort : this._exitPort;
     if (!port || !port.isOpen) {

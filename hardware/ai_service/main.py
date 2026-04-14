@@ -33,22 +33,17 @@ from modules.camera_manager  import CameraManager, get_placeholder_jpeg
 from modules.plate_recognizer import PlateRecognizer
 from modules.face_recognizer  import FaceRecognizer
 
-# Thread pool cho capture + inference song song (4 worker: plate_cam, face_cam, plate_ai, face_ai)
 _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="ai_worker")
 
-# Per-gate semaphore: entry và exit chạy SONG SONG với nhau,
-# nhưng mỗi cổng chỉ xử lý 1 request tại một lúc (tránh double-trigger).
 _entry_semaphore = asyncio.Semaphore(1)
 _exit_semaphore  = asyncio.Semaphore(1)
 
-# ─── Logging ─────────────────────────────────────────────────────────────────
 logging.basicConfig(
     level  = logging.INFO,
     format = "%(asctime)s [%(levelname)s] %(name)s – %(message)s",
 )
 logger = logging.getLogger("ai_service")
 
-# ─── App ─────────────────────────────────────────────────────────────────────
 app = FastAPI(title="Parking AI Service", version="1.0.0")
 
 app.add_middleware(
@@ -58,18 +53,13 @@ app.add_middleware(
     allow_headers  = ["*"],
 )
 
-# Singleton instances
 camera   = CameraManager.get()
 plate_ai = PlateRecognizer.get()
 face_ai  = FaceRecognizer.get()
 
-
-# ─── Models ──────────────────────────────────────────────────────────────────
 class ImagePayload(BaseModel):
-    image_b64: str   # base64-encoded JPEG
+    image_b64: str
 
-
-# ─── Helpers ─────────────────────────────────────────────────────────────────
 def _save_capture(image_bytes: bytes, prefix: str) -> str:
     """Lưu ảnh chụp vào CAPTURES_DIR, trả về đường dẫn tương đối."""
     ts       = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -78,9 +68,8 @@ def _save_capture(image_bytes: bytes, prefix: str) -> str:
     filepath = os.path.join(config.CAPTURES_DIR, filename)
     with open(filepath, "wb") as f:
         f.write(image_bytes)
-    # Trả về path tương đối từ uploads/ để backend dùng làm URL
-    return f"captures/{filename}"
 
+    return f"captures/{filename}"
 
 def _b64_to_bytes(b64: str) -> bytes:
     """Base64 → bytes. Xử lý cả chuỗi có hoặc không có data:/ prefix."""
@@ -88,8 +77,6 @@ def _b64_to_bytes(b64: str) -> bytes:
         b64 = b64.split(",", 1)[1]
     return base64.b64decode(b64)
 
-
-# ─── Routes ──────────────────────────────────────────────────────────────────
 @app.get("/health")
 def health():
     return {
@@ -100,18 +87,15 @@ def health():
         "timestamp":         datetime.now().isoformat(),
     }
 
-
 @app.get("/cameras")
 def list_cameras():
     return {"cameras": camera.list_cameras()}
-
 
 class CamAssignment(BaseModel):
     entry_plate: int
     entry_face:  int
     exit_plate:  int
     exit_face:   int
-
 
 @app.get("/cameras/assignment")
 def get_cam_assignment():
@@ -123,12 +107,11 @@ def get_cam_assignment():
         "exit_face":   config.EXIT_FACE_CAM,
     }
 
-
 @app.post("/cameras/assignment")
 def save_cam_assignment(payload: CamAssignment):
     """Lưu assignment vào .env và cập nhật config runtime (không cần restart)."""
     env_path = Path(__file__).parent / ".env"
-    # Đọc nội dung .env hiện tại (nếu có)
+
     lines: list[str] = []
     if env_path.exists():
         with open(env_path, encoding="utf-8") as f:
@@ -158,14 +141,12 @@ def save_cam_assignment(payload: CamAssignment):
     with open(env_path, "w", encoding="utf-8") as f:
         f.writelines(new_lines)
 
-    # Cập nhật runtime config ngay lập tức
     config.ENTRY_PLATE_CAM = payload.entry_plate
     config.ENTRY_FACE_CAM  = payload.entry_face
     config.EXIT_PLATE_CAM  = payload.exit_plate
     config.EXIT_FACE_CAM   = payload.exit_face
 
     return {"ok": True, "assignment": updates}
-
 
 @app.get("/cameras/assignment")
 def get_cam_assignment():
@@ -176,7 +157,6 @@ def get_cam_assignment():
         "exit_plate":  config.EXIT_PLATE_CAM,
         "exit_face":   config.EXIT_FACE_CAM,
     }
-
 
 @app.post("/capture/{cam_index}")
 async def capture_single(cam_index: int):
@@ -196,7 +176,6 @@ async def capture_single(cam_index: int):
         "image_b64": base64.b64encode(data).decode(),
     }
 
-
 def _mjpeg_generator(cam_index: int):
     """Generator liên tục yield MJPEG frames từ camera.
     Dùng KEEP-pool của camera_manager – không mở VideoCapture riêng,
@@ -206,7 +185,7 @@ def _mjpeg_generator(cam_index: int):
     KHÔNG bao giờ cắt kết nối – khi camera mở được sẽ tự hiển thị video thật.
     """
     boundary = b"--frame"
-    # Stagger theo cam_index (25ms/cam) – tránh 4 cam đọc USB cùng lúc
+
     time.sleep(cam_index * 0.025)
     try:
         while True:
@@ -214,10 +193,9 @@ def _mjpeg_generator(cam_index: int):
             if data:
                 fps_delay = 1.0 / getattr(config, "CAMERA_FPS", 15)
             else:
-                # Camera chưa sẵn sàng – dùng placeholder JPEG đen để giữ
-                # kết nối MJPEG (Chrome/Firefox sẽ cắt stream nếu không có data)
+
                 data = get_placeholder_jpeg()
-                fps_delay = 0.5   # gửi chậm hơn khi chờ camera mở
+                fps_delay = 0.5
             yield (
                 boundary + b"\r\n"
                 b"Content-Type: image/jpeg\r\n\r\n"
@@ -227,7 +205,6 @@ def _mjpeg_generator(cam_index: int):
     except GeneratorExit:
         pass
 
-
 @app.get("/stream/{cam_index}")
 def stream_camera(cam_index: int):
     """MJPEG stream liên tục từ camera chỉ định."""
@@ -236,14 +213,12 @@ def stream_camera(cam_index: int):
         media_type="multipart/x-mixed-replace;boundary=frame",
     )
 
-
 @app.post("/recognize/plate")
 def recognize_plate(payload: ImagePayload):
     """Nhận diện biển số từ ảnh base64."""
     img_bytes = _b64_to_bytes(payload.image_b64)
     result    = plate_ai.recognize(img_bytes)
     return result
-
 
 @app.post("/recognize/face")
 def recognize_face(payload: ImagePayload):
@@ -252,7 +227,6 @@ def recognize_face(payload: ImagePayload):
     result    = face_ai.recognize(img_bytes)
     return result
 
-
 def _capture_img_only(cam_index: int, prefix: str) -> tuple:
     """Thread task: chỉ chụp và lưu ảnh, KHÔNG chạy AI. Trả về (bytes, path)."""
     img = camera.capture(cam_index)
@@ -260,7 +234,6 @@ def _capture_img_only(cam_index: int, prefix: str) -> tuple:
         return img, _save_capture(img, prefix)
     logger.error(f"Khong chup duoc camera {cam_index}")
     return None, None
-
 
 def _capture_and_plate(cam_index: int, prefix: str) -> dict:
     """Thread task: chụp + nhận diện biển số."""
@@ -275,7 +248,6 @@ def _capture_and_plate(cam_index: int, prefix: str) -> dict:
         logger.error(f"Khong chup duoc camera {cam_index}")
     return out
 
-
 def _capture_and_face(cam_index: int, prefix: str) -> dict:
     """Thread task: chụp + nhận diện khuôn mặt."""
     img = camera.capture(cam_index)
@@ -288,7 +260,6 @@ def _capture_and_face(cam_index: int, prefix: str) -> dict:
     else:
         logger.error(f"Khong chup duoc camera {cam_index}")
     return out
-
 
 async def _run_face_with_retry(cam_idx: int, prefix: str) -> dict:
     """Chụp + nhận diện mặt, thử lại tối đa FACE_MAX_RETRIES lần nếu confidence thấp."""
@@ -306,7 +277,6 @@ async def _run_face_with_retry(cam_idx: int, prefix: str) -> dict:
         if retry["confidence"] > result["confidence"]:
             result = retry
     return result
-
 
 async def _run_plate_with_retry(cam_idx: int, prefix: str, first_img: bytes, first_path: str) -> dict:
     """Chạy OCR trên ảnh đã chụp sẵn; nếu confidence thấp, chụp lại + OCR thêm."""
@@ -337,7 +307,6 @@ async def _run_plate_with_retry(cam_idx: int, prefix: str, first_img: bytes, fir
                 }
     return result
 
-
 @app.post("/process/entry")
 async def process_entry():
     """
@@ -352,7 +321,6 @@ async def process_entry():
         t0   = time.time()
         loop = asyncio.get_event_loop()
 
-        # 1. Chụp ảnh biển số ngay (timeout 4s – cam hỏng không block vô hạn)
         try:
             plate_img, plate_path = await asyncio.wait_for(
                 loop.run_in_executor(_executor, _capture_img_only, config.ENTRY_PLATE_CAM, "entry_plate"),
@@ -361,10 +329,8 @@ async def process_entry():
             plate_img, plate_path = None, None
             logger.warning(f"ENTRY plate capture timeout – cam {config.ENTRY_PLATE_CAM} có thể bị hỏng")
 
-        # 2. Chờ người đứng đúng vị trí
         await asyncio.sleep(config.FACE_CAPTURE_DELAY)
 
-        # 3. Nhận diện mặt trước (timeout 8s bao gồm retry)
         try:
             face_res = await asyncio.wait_for(
                 _run_face_with_retry(config.ENTRY_FACE_CAM, "entry_face"),
@@ -373,7 +339,6 @@ async def process_entry():
             face_res = {"user_id": None, "confidence": 0.0, "face_image_path": None}
             logger.warning(f"ENTRY face recognition timeout – cam {config.ENTRY_FACE_CAM}")
 
-        # 4. Nhận diện biển số (timeout 8s bao gồm retry)
         try:
             plate_res = await asyncio.wait_for(
                 _run_plate_with_retry(config.ENTRY_PLATE_CAM, "entry_plate", plate_img, plate_path),
@@ -392,7 +357,6 @@ async def process_entry():
             "processing_time_ms": round((time.time() - t0) * 1000),
         }
 
-
 @app.post("/process/exit")
 async def process_exit():
     """
@@ -403,7 +367,6 @@ async def process_exit():
         t0   = time.time()
         loop = asyncio.get_event_loop()
 
-        # 1. Chụp ảnh biển số ngay (timeout 4s – cam hỏng không block vô hạn)
         try:
             plate_img, plate_path = await asyncio.wait_for(
                 loop.run_in_executor(_executor, _capture_img_only, config.EXIT_PLATE_CAM, "exit_plate"),
@@ -412,10 +375,8 @@ async def process_exit():
             plate_img, plate_path = None, None
             logger.warning(f"EXIT plate capture timeout – cam {config.EXIT_PLATE_CAM} có thể bị hỏng")
 
-        # 2. Chờ người đứng đúng vị trí
         await asyncio.sleep(config.FACE_CAPTURE_DELAY)
 
-        # 3. Nhận diện mặt trước (timeout 8s bao gồm retry)
         try:
             face_res = await asyncio.wait_for(
                 _run_face_with_retry(config.EXIT_FACE_CAM, "exit_face"),
@@ -424,7 +385,6 @@ async def process_exit():
             face_res = {"user_id": None, "confidence": 0.0, "face_image_path": None}
             logger.warning(f"EXIT face recognition timeout – cam {config.EXIT_FACE_CAM}")
 
-        # 4. Nhận diện biển số (timeout 8s bao gồm retry)
         try:
             plate_res = await asyncio.wait_for(
                 _run_plate_with_retry(config.EXIT_PLATE_CAM, "exit_plate", plate_img, plate_path),
@@ -443,15 +403,12 @@ async def process_exit():
             "processing_time_ms": round((time.time() - t0) * 1000),
         }
 
-
 @app.post("/faces/reload")
 def reload_faces():
     """Reload toàn bộ khuôn mặt đã đăng ký từ uploads/faces/."""
     count = face_ai.reload_known_faces()
     return {"loaded_users": count}
 
-
-# ─── Startup ─────────────────────────────────────────────────────────────────
 @app.on_event("startup")
 async def startup():
     logger.info(f"AI Service khởi động – UPLOADS_DIR={config.UPLOADS_DIR}")
@@ -466,12 +423,11 @@ async def startup():
     from modules.camera_manager import CAPTURE_MODE as _CAP_MODE
 
     if _CAP_MODE == "KEEP":
-        # KEEP mode: chờ Windows khởi tạo xong driver camera trước khi warm
+
         startup_delay = getattr(config, "CAMERA_STARTUP_DELAY", 3.0)
         logger.info(f"Chờ {startup_delay}s cho Windows khởi tạo camera driver...")
         await asyncio.sleep(startup_delay)
 
-        # KEEP mode: pre-warm và giữ camera mở liên tục (mỗi cam cần port USB riêng)
         await loop.run_in_executor(_executor, camera.warm_cameras, cam_indices)
 
         import threading
@@ -496,8 +452,7 @@ async def startup():
                     backoff = min(5.0 * (2 ** min(failures, 3)), 60.0)
                     if now - _cam_fail_at.get(idx, 0) < backoff:
                         continue
-                    # Nếu camera đang bị aliased, thử unmark định kỳ (60s) để
-                    # phát hiện khi user cắm thêm camera vật lý mới
+
                     if idx in camera._aliased_indices:
                         camera._aliased_indices.discard(idx)
                         logger.info(f"Camera {idx} thử lại sau khi bị aliased (user có thể cắm thêm cam)")
@@ -515,18 +470,14 @@ async def startup():
                         _cam_fail_count[idx] = failures + 1
         threading.Thread(target=_cam_keepalive, daemon=True).start()
     else:
-        # LAZY mode: mở-đóng mỗi lần trigger – KHÔNG giữ camera mở (khuyến nghị cho USB hub)
-        # Không chạy keepalive/staggered vì chúng sẽ chiếm cam_lock và gây xung đột
-        logger.info("LAZY mode – bỏ qua keepalive/staggered (USB hub mode)")
 
+        logger.info("LAZY mode – bỏ qua keepalive/staggered (USB hub mode)")
 
 @app.on_event("shutdown")
 async def shutdown():
     camera.release_all()
     logger.info("AI Service đã dừng")
 
-
-# ─── Entry point ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host=config.AI_HOST, port=config.AI_PORT, reload=False)

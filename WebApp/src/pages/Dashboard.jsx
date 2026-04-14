@@ -35,14 +35,14 @@ export default function Dashboard() {
 
   return (
     <div className="p-4 space-y-4">
-      {/* Chào mừng */}
+      {}
       <div className="bg-gradient-to-r from-blue-600 to-blue-500 rounded-2xl p-5 text-white">
         <p className="text-blue-100 text-sm">Xin chào,</p>
         <h2 className="text-xl font-bold mt-0.5">{currentUser?.full_name || '—'}</h2>
         <p className="text-blue-200 text-xs mt-1">{currentUser?.phone_number}</p>
       </div>
 
-      {/* Số dư ví */}
+      {}
       <div
         className="card cursor-pointer hover:shadow-md transition-shadow"
         onClick={() => navigate('/wallet')}
@@ -63,7 +63,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Xe đang trong bãi */}
+      {}
       {activeSessions.length > 0 && (
         <div>
           <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">
@@ -91,7 +91,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Quick actions */}
+      {}
       <div className="grid grid-cols-2 gap-3">
         <button
           onClick={() => navigate('/wallet')}
@@ -134,7 +134,7 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* Xe đã đăng ký */}
+      {}
       {vehicles.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-2">

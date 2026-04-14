@@ -2,7 +2,6 @@ const router = require('express').Router();
 const { pool } = require('../../db');
 const userAuth = require('../../middleware/userAuth');
 
-// GET /api/user/authorizations  – danh sách ủy quyền
 router.get('/', userAuth, async (req, res, next) => {
   try {
     const result = await pool.query(
@@ -19,7 +18,6 @@ router.get('/', userAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/user/authorizations/:id
 router.get('/:id', userAuth, async (req, res, next) => {
   try {
     const result = await pool.query(
@@ -34,7 +32,6 @@ router.get('/:id', userAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// DELETE /api/user/authorizations/:id  – thu hồi ủy quyền
 router.delete('/:id', userAuth, async (req, res, next) => {
   try {
     const result = await pool.query(

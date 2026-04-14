@@ -45,7 +45,6 @@ export default function WalletPage() {
   const [error, setError]               = useState('');
   const [success, setSuccess]           = useState('');
 
-  // Rút tiền
   const [wForm, setWForm]   = useState({ amount: '', bank_name: '', bank_account: '', account_name: '' });
   const [wLoading, setWLoading] = useState(false);
   const [withdrawals, setWithdrawals] = useState([]);
@@ -92,7 +91,7 @@ export default function WalletPage() {
 
   return (
     <div className="p-4 space-y-4">
-      {/* Số dư */}
+      {}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-5 text-white">
         <p className="text-blue-200 text-sm">Số dư hiện tại</p>
         <p className="text-3xl font-bold mt-1">{fmtCurrency(wallet?.balance)}</p>
@@ -110,12 +109,12 @@ export default function WalletPage() {
         </button>
       </div>
 
-      {/* Thông báo */}
+      {}
       {success && (
         <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm">{success}</div>
       )}
 
-      {/* Form nạp tiền */}
+      {}
       {showTopup && (
         <form onSubmit={handleTopup} className="card border-2 border-blue-200 space-y-4">
           <div className="flex items-center justify-between">
@@ -124,7 +123,7 @@ export default function WalletPage() {
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
 
-          {/* Số tiền nhanh */}
+          {}
           <div>
             <p className="text-sm text-slate-500 mb-2">Chọn nhanh</p>
             <div className="grid grid-cols-2 gap-2">
@@ -181,7 +180,7 @@ export default function WalletPage() {
         </form>
       )}
 
-      {/* Form rút tiền */}
+      {}
       {showWithdraw && (
         <form onSubmit={handleWithdraw} className="card border-2 border-orange-200 space-y-4">
           <div className="flex items-center justify-between">
@@ -215,7 +214,7 @@ export default function WalletPage() {
         </form>
       )}
 
-      {/* Lịch sử rút tiền */}
+      {}
       {withdrawals.length > 0 && (
         <div>
           <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-1">
@@ -251,7 +250,7 @@ export default function WalletPage() {
         </div>
       )}
 
-      {/* Lịch sử giao dịch */}
+      {}
       <div>
         <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
           Lịch sử giao dịch ({walletTotal})
@@ -287,7 +286,7 @@ export default function WalletPage() {
           </div>
         )}
 
-        {/* Phân trang */}
+        {}
         {totalPages > 1 && (
           <div className="flex justify-center gap-2 mt-4">
             <button disabled={walletPage <= 1} onClick={() => fetchTransactions(walletPage - 1)}

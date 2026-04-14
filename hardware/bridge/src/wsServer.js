@@ -1,17 +1,11 @@
-/**
- * WebSocket Server – đẩy sự kiện real-time tới Admin Web
- *
- * Admin Web kết nối ws://localhost:4002
- * Nếu đã dùng Socket.IO trong backend, bạn có thể bỏ file này
- * và dùng socket.io-client từ bridge thay thế.
- */
+
 
 const { WebSocketServer } = require('ws');
 const cfg                 = require('./config');
 const serial              = require('./esp8266Handler');
 
 let wss = null;
-let _controller = null;   // set sau khi controller init()
+let _controller = null;
 
 function setController(ctrl) { _controller = ctrl; }
 
@@ -28,7 +22,7 @@ function start() {
         const { type, gate } = JSON.parse(raw);
         if (type === 'OPEN_BARRIER')  { if (gate) serial.openBarrier(gate); return; }
         if (type === 'CLOSE_BARRIER') { if (gate) serial.closeBarrier(gate); return; }
-        // Mô phỏng cảm biến phát hiện xe (dùng khi test không có Arduino)
+
         if (type === 'SIMULATE_SENSOR') {
           const g = gate || 'entry';
           console.log(`[WS] SIMULATE_SENSOR gate=${g}`);
@@ -42,19 +36,11 @@ function start() {
   });
 }
 
-/**
- * Gửi event tới tất cả client đang kết nối
- * @param {string} type  – loại event: ENTRY_DETECTED | EXIT_DETECTED |
- *                                     SESSION_CREATED | SESSION_CLOSED |
- *                                     BARRIER_OPENED | BARRIER_CLOSED |
- *                                     AI_RESULT | ERROR
- * @param {object} data  – payload kèm theo
- */
 function broadcast(type, data) {
   if (!wss) return;
   const msg = JSON.stringify({ type, data, ts: Date.now() });
   wss.clients.forEach(client => {
-    if (client.readyState === 1 /* OPEN */) {
+    if (client.readyState === 1 ) {
       client.send(msg);
     }
   });

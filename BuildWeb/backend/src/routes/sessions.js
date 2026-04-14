@@ -2,14 +2,11 @@ const router = require('express').Router();
 const auth = require('../middleware/auth');
 const { pool } = require('../db');
 
-// GET /api/sessions?status=active&page=1&limit=50&search=
-// Trả về cả thành viên (parking_sessions) lẫn khách vãng lai (guest_sessions)
 router.get('/', auth, async (req, res, next) => {
   try {
     const { status, search = '', page = 1, limit = 50 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
-    // Điều kiện lọc cho từng loại
     const memberConditions = [];
     const guestConditions  = [];
     const params = [];
@@ -30,7 +27,6 @@ router.get('/', auth, async (req, res, next) => {
     const memberWhere = memberConditions.length ? 'WHERE ' + memberConditions.join(' AND ') : '';
     const guestWhere  = guestConditions.length  ? 'WHERE ' + guestConditions.join(' AND ')  : '';
 
-    // Đếm tổng
     const countRes = await pool.query(`
       SELECT COUNT(*) FROM (
         SELECT ps.session_id FROM parking_sessions ps
@@ -40,7 +36,6 @@ router.get('/', auth, async (req, res, next) => {
       ) t
     `, params);
 
-    // Dữ liệu có phân trang
     params.push(parseInt(limit), offset);
     const dataRes = await pool.query(`
       SELECT
@@ -87,7 +82,6 @@ router.get('/', auth, async (req, res, next) => {
   }
 });
 
-// GET /api/sessions/:id
 router.get('/:id', auth, async (req, res, next) => {
   try {
     const result = await pool.query(`
@@ -103,8 +97,6 @@ router.get('/:id', auth, async (req, res, next) => {
   }
 });
 
-// PATCH /api/sessions/:id/force-end
-// Hỗ trợ cả phiên thành viên (parking_sessions) và khách vãng lai (guest_sessions)
 router.patch('/:id/force-end', auth, async (req, res, next) => {
   try {
     const { reason } = req.body;
@@ -112,7 +104,6 @@ router.patch('/:id/force-end', auth, async (req, res, next) => {
       return res.status(400).json({ error: 'Bắt buộc nhập lý do kết thúc cưỡng bức' });
     }
 
-    // Thử kết thúc phiên thành viên trước
     const memberResult = await pool.query(`
       UPDATE parking_sessions
       SET status = 'force_ended',
@@ -139,7 +130,6 @@ router.patch('/:id/force-end', auth, async (req, res, next) => {
       return res.json({ ...session, session_kind: 'member' });
     }
 
-    // Thử kết thúc phiên khách vãng lai
     const guestResult = await pool.query(`
       UPDATE guest_sessions
       SET status = 'abnormal',

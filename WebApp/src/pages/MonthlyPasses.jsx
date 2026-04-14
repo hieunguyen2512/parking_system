@@ -50,7 +50,7 @@ export default function MonthlyPasses() {
 
   async function loadLots() {
     try {
-      // Lấy lot từ API config hoặc dùng danh sách tĩnh nếu chưa có endpoint public
+
       const res = await fetch('/api/user/parking-lots', {
         headers: { Authorization: `Bearer ${localStorage.getItem('user_token')}` }
       });
@@ -90,7 +90,7 @@ export default function MonthlyPasses() {
 
   return (
     <div className="p-4 space-y-4">
-      {/* Header */}
+      {}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold text-slate-800">Vé tháng</h2>
@@ -104,11 +104,11 @@ export default function MonthlyPasses() {
         </button>
       </div>
 
-      {/* Thông báo */}
+      {}
       {success && <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm">{success}</div>}
       {error   && <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">{error}</div>}
 
-      {/* Form mua vé */}
+      {}
       {showBuy && (
         <form onSubmit={handleBuy} className="card border-2 border-blue-200 space-y-4">
           <div className="flex items-center justify-between">
@@ -116,7 +116,7 @@ export default function MonthlyPasses() {
             <button type="button" onClick={() => setShowBuy(false)}><X size={18} className="text-slate-400" /></button>
           </div>
 
-          {/* Chọn xe */}
+          {}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Chọn xe</label>
             {activeVehicles.length === 0 ? (
@@ -144,7 +144,7 @@ export default function MonthlyPasses() {
             )}
           </div>
 
-          {/* Bãi đỗ */}
+          {}
           {lots.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Bãi đỗ xe</label>
@@ -162,7 +162,7 @@ export default function MonthlyPasses() {
             </div>
           )}
 
-          {/* Số tháng */}
+          {}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Số tháng</label>
             <div className="flex gap-2">
@@ -182,7 +182,7 @@ export default function MonthlyPasses() {
             </div>
           </div>
 
-          {/* Tổng tiền */}
+          {}
           <div className="bg-slate-50 rounded-xl p-3">
             <div className="flex justify-between text-sm">
               <span className="text-slate-500">Đơn giá</span>
@@ -214,7 +214,7 @@ export default function MonthlyPasses() {
         </form>
       )}
 
-      {/* Danh sách vé */}
+      {}
       {loading ? (
         <p className="text-center text-slate-400 py-10">Đang tải...</p>
       ) : passes.length === 0 ? (

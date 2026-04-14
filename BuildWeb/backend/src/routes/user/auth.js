@@ -5,7 +5,6 @@ const crypto = require('crypto');
 const { pool } = require('../../db');
 const userAuth = require('../../middleware/userAuth');
 
-// POST /api/user/auth/register
 router.post('/register', async (req, res, next) => {
   try {
     const { full_name, phone_number, password } = req.body;
@@ -34,8 +33,6 @@ router.post('/register', async (req, res, next) => {
     );
     const user = userRes.rows[0];
 
-    // Ví được tạo tự động bởi trigger auto_create_wallet trong DB
-
     const token = jwt.sign(
       { id: user.user_id, phone: user.phone_number, type: 'user' },
       process.env.JWT_SECRET,
@@ -55,7 +52,6 @@ router.post('/register', async (req, res, next) => {
   }
 });
 
-// POST /api/user/auth/login
 router.post('/login', async (req, res, next) => {
   try {
     const { phone_number, password } = req.body;
@@ -86,7 +82,6 @@ router.post('/login', async (req, res, next) => {
       { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
     );
 
-    // Lưu refresh token
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     await pool.query(
       `INSERT INTO refresh_tokens (user_id, token_hash, ip_address, device_info, expires_at)
@@ -108,7 +103,6 @@ router.post('/login', async (req, res, next) => {
   }
 });
 
-// POST /api/user/auth/logout
 router.post('/logout', userAuth, async (req, res, next) => {
   try {
     const authHeader = req.headers['authorization'];
@@ -124,7 +118,6 @@ router.post('/logout', userAuth, async (req, res, next) => {
   }
 });
 
-// GET /api/user/auth/me
 router.get('/me', userAuth, async (req, res, next) => {
   try {
     const result = await pool.query(
@@ -143,7 +136,6 @@ router.get('/me', userAuth, async (req, res, next) => {
   }
 });
 
-// PATCH /api/user/auth/change-password
 router.patch('/change-password', userAuth, async (req, res, next) => {
   try {
     const { current_password, new_password } = req.body;
@@ -170,7 +162,6 @@ router.patch('/change-password', userAuth, async (req, res, next) => {
   }
 });
 
-// PATCH /api/user/auth/profile
 router.patch('/profile', userAuth, async (req, res, next) => {
   try {
     const { full_name } = req.body;

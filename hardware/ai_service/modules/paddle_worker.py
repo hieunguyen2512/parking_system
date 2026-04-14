@@ -14,15 +14,11 @@ import os
 import numpy as np
 
 os.environ.setdefault('PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK', 'True')
-# Disable OneDNN (mkldnn) as the default run mode in PaddleX –
-# prevents ConvertPirAttribute2RuntimeAttribute crash on Intel CPUs
+
 os.environ['PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT'] = '0'
 
-# CRITICAL: import torch FIRST so shm.dll is loaded before paddle (Windows DLL conflict)
-# paddleocr → paddlex → modelscope → torch, and torch must be pre-loaded first.
-import torch as _torch_preload  # noqa: F401 – pre-load DLLs only
+import torch as _torch_preload
 
-# Also set flag via Python API after paddle import
 import paddle
 paddle.set_flags({'FLAGS_use_mkldnn': 0})
 
@@ -35,23 +31,22 @@ _COMMON = {
     'use_textline_orientation': False,
 }
 
-# Thu init voi cac model level khac nhau (fall through)
 ocr = None
 for _params in [
-    # v5 mobile det + cached v5 mobile rec
+
     {**_COMMON, 'lang': 'en',
      'text_detection_model_name': 'PP-OCRv5_mobile_det',
      'text_recognition_model_name': 'en_PP-OCRv5_mobile_rec'},
-    # v4 mobile det + v4 mobile rec
+
     {**_COMMON, 'lang': 'en',
      'text_detection_model_name': 'PP-OCRv4_mobile_det',
      'text_recognition_model_name': 'en_PP-OCRv4_mobile_rec'},
-    # last resort: default (server det may fail but worth trying)
+
     {**_COMMON, 'lang': 'en'},
 ]:
     try:
         ocr = PaddleOCR(**_params)
-        # Warmup
+
         _blank = np.ones((64, 200, 3), np.uint8) * 200
         list(ocr.predict(_blank))
         break
@@ -63,7 +58,6 @@ for _params in [
 if ocr is None:
     print(json.dumps({'status': 'error', 'msg': 'PaddleOCR init failed'}), flush=True)
     sys.exit(1)
-
 
 def run_ocr(img_bgr):
     result = list(ocr.predict(img_bgr))
@@ -101,8 +95,6 @@ def run_ocr(img_bgr):
     merged = "|".join(merged_rows)
     return merged, float(np.mean(confs)) if confs else 0.0
 
-
-# Signal ready
 print(json.dumps({"status": "ready"}), flush=True)
 
 for line in sys.stdin:

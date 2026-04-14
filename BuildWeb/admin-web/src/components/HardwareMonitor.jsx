@@ -1,9 +1,4 @@
-/**
- * HardwareMonitor – Admin Web
- *
- * Hiển thị luồng sự kiện xe ra/vào nhận qua Socket.IO từ backend.
- * WebThietBi xử lý nhận diện → gọi backend → backend emit Socket.IO → component này cập nhật.
- */
+
 import { useRef, useEffect } from 'react'
 import { useStore } from '../store/useStore'
 import { ArrowDownToLine, ArrowUpFromLine, Wifi, WifiOff } from 'lucide-react'
@@ -18,18 +13,16 @@ export default function HardwareMonitor() {
   const socketConnected = useStore(s => s.socketConnected)
   const listRef         = useRef(null)
 
-  // Auto-scroll to top (newest first)
   useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = 0
   }, [liveEvents])
 
-  // Last seen per gate
   const lastEntry = liveEvents.find(e => e.type === 'vehicle:entry')
   const lastExit  = liveEvents.find(e => e.type === 'vehicle:exit')
 
   return (
     <div className="space-y-4">
-      {/* Header */}
+      {}
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold text-gray-100">Xe ra / vào trực tiếp</h2>
         <span className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full
@@ -40,7 +33,7 @@ export default function HardwareMonitor() {
         </span>
       </div>
 
-      {/* Gate status cards */}
+      {}
       <div className="grid grid-cols-2 gap-3">
         {[
           { gate: 'entry', label: 'Cổng VÀO', last: lastEntry, icon: <ArrowDownToLine size={14} className="text-emerald-400" />, color: 'emerald' },
@@ -78,7 +71,7 @@ export default function HardwareMonitor() {
         ))}
       </div>
 
-      {/* Event stream */}
+      {}
       <div className="bg-gray-900 rounded-xl border border-gray-700 overflow-hidden">
         <div className="px-4 py-2 border-b border-gray-700 flex items-center justify-between">
           <span className="text-sm font-medium text-gray-300">Nhật ký sự kiện</span>

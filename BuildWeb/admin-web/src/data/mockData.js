@@ -1,11 +1,10 @@
-// ─── Helpers ────────────────────────────────────────────────────────────────
+
 const ago = (ms) => new Date(Date.now() - ms)
 const minsAgo = (m) => ago(m * 60000)
 const hoursAgo = (h) => ago(h * 3600000)
 const daysAgo = (d) => ago(d * 86400000)
 const fmtVND = (n) => n.toLocaleString('vi-VN') + 'đ'
 
-// ─── Bãi xe ─────────────────────────────────────────────────────────────────
 export const mockLot = {
   lot_id: 'lot-001',
   name: 'Bãi Xe Thông Minh – ĐH Hàng Hải Việt Nam',
@@ -15,7 +14,6 @@ export const mockLot = {
   is_active: true,
 }
 
-// ─── Người dùng ─────────────────────────────────────────────────────────────
 export const mockUsers = [
   { user_id:'u-001', full_name:'Nguyễn Văn An',    phone_number:'0901234567', is_active:true,  is_verified:true,  wallet_balance:125000, low_balance_threshold:50000, total_vehicles:2, total_sessions:47, created_at:daysAgo(210) },
   { user_id:'u-002', full_name:'Trần Thị Bích',     phone_number:'0912345678', is_active:true,  is_verified:true,  wallet_balance:320000, low_balance_threshold:50000, total_vehicles:1, total_sessions:32, created_at:daysAgo(175) },
@@ -29,7 +27,6 @@ export const mockUsers = [
   { user_id:'u-010', full_name:'Bùi Thị Lan',       phone_number:'0990123456', is_active:true,  is_verified:true,  wallet_balance:42000,  low_balance_threshold:50000, total_vehicles:2, total_sessions:16, created_at:daysAgo(50)  },
 ]
 
-// ─── Phương tiện ─────────────────────────────────────────────────────────────
 export const mockVehicles = [
   { vehicle_id:'v-001', user_id:'u-001', license_plate:'51F-123.45', nickname:'Xe đi làm',   is_active:true },
   { vehicle_id:'v-002', user_id:'u-001', license_plate:'51K-678.90', nickname:'Xe cuối tuần',is_active:true },
@@ -49,7 +46,6 @@ export const mockVehicles = [
   { vehicle_id:'v-016', user_id:'u-010', license_plate:'51K-300.03', nickname:'Xe đạp điện', is_active:true },
 ]
 
-// ─── Thiết bị ─────────────────────────────────────────────────────────────
 export const mockDevices = [
   { device_id:'d-001', device_name:'Máy tính Central AI',    device_type:'computer',      lane:'both',  status:'online',      serial_port:null,    ip_address:'192.168.1.10', last_heartbeat:minsAgo(1)  },
   { device_id:'d-002', device_name:'Arduino Cổng Vào',       device_type:'arduino',       lane:'entry', status:'online',      serial_port:'COM3',  ip_address:null,           last_heartbeat:minsAgo(1)  },
@@ -67,7 +63,6 @@ export const mockDevices = [
   { device_id:'d-014', device_name:'Loa Cổng Ra',            device_type:'speaker',       lane:'exit',  status:'online',      serial_port:null,    ip_address:null,           last_heartbeat:minsAgo(2)  },
 ]
 
-// ─── Phiên đang hoạt động ────────────────────────────────────────────────────
 export const mockActiveSessions = [
   { session_id:'s-a01', vehicle_id:'v-001', user_id:'u-001', license_plate:'51F-123.45', user_name:'Nguyễn Văn An',  entry_time:hoursAgo(2.5), session_type:'member',     lot_id:'lot-001' },
   { session_id:'s-a02', vehicle_id:'v-003', user_id:'u-002', license_plate:'51G-321.54', user_name:'Trần Thị Bích',  entry_time:hoursAgo(1.2), session_type:'member',     lot_id:'lot-001' },
@@ -79,7 +74,6 @@ export const mockActiveSessions = [
   { session_id:'s-g02', vehicle_id:null,    user_id:null,    license_plate:'51B-112.23', user_name:null,            entry_time:minsAgo(33),   session_type:'guest',      lot_id:'lot-001', session_code:'GX-5034' },
 ]
 
-// ─── Lịch sử phiên ──────────────────────────────────────────────────────────
 const genHistory = (id, plate, userName, hoursBack, durationH, fee, type='member', code=null) => ({
   session_id: `sh-${id}`,
   license_plate: plate,
@@ -116,7 +110,6 @@ export const mockSessionHistory = [
   genHistory('020','51G-321.54','Trần Thị Bích',   33,  1.8, 9000),
 ]
 
-// ─── Nhật ký sự kiện ────────────────────────────────────────────────────────
 export const mockEventLogs = [
   { event_id:'e-001', event_type:'vehicle_entry',         license_plate:'51F-123.45', description:'Xe vào – xác thực chính chủ thành công',           created_at:hoursAgo(2.5),  severity:'info'    },
   { event_id:'e-002', event_type:'auth_success_owner',    license_plate:'51F-123.45', description:'Khuôn mặt khớp (similarity: 0.94) – biển số khớp', created_at:hoursAgo(2.5),  severity:'info'    },
@@ -140,7 +133,6 @@ export const mockEventLogs = [
   { event_id:'e-020', event_type:'vehicle_exit_guest',    license_plate:'52F-100.00', description:'Khách vãng lai ra – thanh toán 10.000đ – GX-3912', created_at:hoursAgo(6),    severity:'info'    },
 ]
 
-// ─── Cảnh báo ────────────────────────────────────────────────────────────────
 export const mockAlerts = [
   { alert_id:'a-001', alert_type:'camera_error',          severity:'critical', title:'Camera Biển Số Ra không phản hồi',       description:'Camera d-007 (IP 192.168.1.24) không phản hồi trong 2 giờ. Ảnh biển số làn ra không thu được.', is_resolved:false, related_device_id:'d-007', created_at:hoursAgo(2) },
   { alert_id:'a-002', alert_type:'device_offline',        severity:'warning',  title:'Loa Cổng Vào mất kết nối',               description:'Thiết bị loa d-013 không gửi heartbeat trong 5 giờ. Thông báo âm thanh tại cổng vào có thể không hoạt động.', is_resolved:false, related_device_id:'d-013', created_at:hoursAgo(5) },
@@ -149,7 +141,6 @@ export const mockAlerts = [
   { alert_id:'a-005', alert_type:'arduino_disconnected',  severity:'critical', title:'Arduino Cổng Ra mất kết nối USB Serial', description:'Arduino d-003 (COM4) không phản hồi. Barrier và cảm biến cổng ra có thể không hoạt động.', is_resolved:false, related_device_id:'d-003', created_at:minsAgo(10) },
 ]
 
-// ─── Báo cáo ngày ────────────────────────────────────────────────────────────
 export const mockDailyReports = [
   { date:'24/03', total_sessions:112, member_sessions:89, guest_sessions:23, total_revenue:580000, member_revenue:445000, guest_revenue:135000, auth_success:104, auth_failed:8 },
   { date:'25/03', total_sessions:98,  member_sessions:78, guest_sessions:20, total_revenue:512000, member_revenue:395000, guest_revenue:117000, auth_success:91,  auth_failed:7 },
@@ -169,14 +160,12 @@ export const mockHourlyTraffic = [
   { hour:'20h', count:29 }, { hour:'21h', count:18 }, { hour:'22h', count:9 },
 ]
 
-// ─── Bảng giá ────────────────────────────────────────────────────────────────
 export const mockPricing = [
   { config_id:'p-001', time_slot_name:'Ban ngày', slot_start:'06:00', slot_end:'18:00', price_per_hour:5000,  minimum_fee:5000,  is_active:true },
   { config_id:'p-002', time_slot_name:'Buổi tối', slot_start:'18:00', slot_end:'22:00', price_per_hour:8000,  minimum_fee:8000,  is_active:true },
   { config_id:'p-003', time_slot_name:'Ban đêm',  slot_start:'22:00', slot_end:'06:00', price_per_hour:3000,  minimum_fee:3000,  is_active:true },
 ]
 
-// ─── Cấu hình hệ thống ──────────────────────────────────────────────────────
 export const mockSystemConfig = [
   { config_key:'face_match_threshold',        config_value:'0.6',  data_type:'decimal', description:'Ngưỡng Cosine Similarity tối thiểu để chấp nhận khuôn mặt (0.0–1.0)' },
   { config_key:'max_verify_attempts',         config_value:'3',    data_type:'integer', description:'Số lần thử nhận diện tối đa trước khi chuyển khách vãng lai' },
@@ -188,7 +177,6 @@ export const mockSystemConfig = [
   { config_key:'guest_session_code_prefix',   config_value:'GX',   data_type:'string',  description:'Tiền tố mã phiên khách vãng lai (VD: GX-4821)' },
 ]
 
-// ─── Giao dịch ví ────────────────────────────────────────────────────────────
 export const mockTransactions = [
   { transaction_id:'t-001', user_id:'u-001', transaction_type:'topup',  amount:200000, balance_after:325000, payment_gateway:'vnpay',        status:'success', created_at:daysAgo(3)   },
   { transaction_id:'t-002', user_id:'u-001', transaction_type:'deduct', amount:15000,  balance_after:310000, payment_gateway:'system',       status:'success', created_at:daysAgo(3)   },

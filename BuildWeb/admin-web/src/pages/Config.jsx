@@ -1,17 +1,15 @@
 import { useState } from 'react'
 import { useStore } from '../store/useStore'
-import { CheckCircle2, Pencil, X, Save, Settings, DollarSign, Building2 } from 'lucide-react'
+import { Pencil, X, Save, DollarSign, Building2 } from 'lucide-react'
 import clsx from 'clsx'
 
 const fmtVND = n => Number(n).toLocaleString('vi-VN') + 'đ'
 
 export default function Config() {
-  const { pricing, updatePricing, systemConfig, updateConfig, lot } = useStore()
+  const { pricing, updatePricing, lot } = useStore()
   const [tab, setTab] = useState('pricing')
   const [editPricing, setEditPricing] = useState(null)
   const [priceDraft, setPriceDraft] = useState({})
-  const [configDraft, setConfigDraft] = useState({})
-  const [savedConfig, setSavedConfig] = useState(false)
 
   const handleEditPrice = (p) => {
     setEditPricing(p.config_id)
@@ -27,20 +25,12 @@ export default function Config() {
     setEditPricing(null)
   }
 
-  const handleSaveConfig = () => {
-    Object.entries(configDraft).forEach(([k, v]) => updateConfig(k, v))
-    setConfigDraft({})
-    setSavedConfig(true)
-    setTimeout(() => setSavedConfig(false), 2000)
-  }
-
   return (
     <div className="space-y-5">
-      {/* Tabs */}
+      {}
       <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
         {[
           ['pricing', <DollarSign size={14}/>, 'Bảng giá'],
-          ['system',  <Settings size={14}/>,   'Cấu hình hệ thống'],
           ['lot',     <Building2 size={14}/>,  'Thông tin bãi xe'],
         ].map(([v, icon, l]) => (
           <button
@@ -56,7 +46,7 @@ export default function Config() {
         ))}
       </div>
 
-      {/* ── Pricing ── */}
+      {}
       {tab === 'pricing' && (
         <div className="space-y-4">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
@@ -151,52 +141,7 @@ export default function Config() {
         </div>
       )}
 
-      {/* ── System Config ── */}
-      {tab === 'system' && (
-        <div className="space-y-4">
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700">
-            Thay đổi cấu hình hệ thống sẽ ảnh hưởng đến hoạt động của bãi xe. Hãy chắc chắn trước khi lưu.
-          </div>
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="divide-y divide-gray-100">
-              {systemConfig.map(c => (
-                <div key={c.config_key} className="px-5 py-4 flex items-start gap-5">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-mono text-sm text-gray-800 font-medium">{c.config_key}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">{c.description}</div>
-                    <span className="inline-block mt-1 text-xs bg-gray-100 text-gray-600 rounded px-1.5 py-0.5 font-mono">{c.data_type}</span>
-                  </div>
-                  <div className="shrink-0 w-44">
-                    <input
-                      type={c.data_type === 'decimal' || c.data_type === 'integer' ? 'number' : 'text'}
-                      step={c.data_type === 'decimal' ? '0.01' : '1'}
-                      defaultValue={c.config_value}
-                      onChange={e => setConfigDraft(d => ({ ...d, [c.config_key]: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
-              {savedConfig ? (
-                <div className="flex items-center gap-2 text-sm text-emerald-700">
-                  <CheckCircle2 size={15}/> Đã lưu cấu hình thành công
-                </div>
-              ) : <div />}
-              <button
-                onClick={handleSaveConfig}
-                disabled={Object.keys(configDraft).length === 0}
-                className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors"
-              >
-                <Save size={15}/> Lưu tất cả thay đổi
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Lot info ── */}
+      {}
       {tab === 'lot' && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100">

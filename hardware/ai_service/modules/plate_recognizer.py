@@ -23,7 +23,6 @@ import config
 
 logger = logging.getLogger(__name__)
 
-
 class PlateRecognizer:
     _instance = None
 
@@ -31,7 +30,7 @@ class PlateRecognizer:
         self._ocr    = None
         self._ready  = False
         self._lock   = Lock()
-        self._paddle_proc = None   # subprocess for PaddleOCR
+        self._paddle_proc = None
         self._load_models()
 
     @classmethod
@@ -40,12 +39,8 @@ class PlateRecognizer:
             cls._instance = cls()
         return cls._instance
 
-    # ─── Load model ─────────────────────────────────────────────────────────
-
     def _load_models(self):
-        # ── Buoc 1: Load torch-based engines (EasyOCR + doctr) ──────────────
 
-        # EasyOCR (fallback)
         self._ocr = None
         try:
             import easyocr
@@ -56,7 +51,6 @@ class PlateRecognizer:
         except Exception as e:
             logger.error(f"Loi load EasyOCR: {e}")
 
-        # doctr (last resort)
         self._doctr = None
         try:
             from doctr.models import ocr_predictor
@@ -70,7 +64,6 @@ class PlateRecognizer:
 
         self._ready = self._ocr is not None
 
-        # ── Buoc 2: Launch PaddleOCR subprocess trong background thread ─────
         self._paddle_proc = None
         import threading
         threading.Thread(target=self._start_paddle_worker, daemon=True).start()
@@ -93,7 +86,7 @@ class PlateRecognizer:
                      'PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK': 'True',
                      'PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT': '0'},
             )
-            # Wait for "ready" signal (readline blocks until worker prints it)
+
             deadline = time.time() + 90
             while time.time() < deadline:
                 if proc.poll() is not None:
@@ -117,45 +110,39 @@ class PlateRecognizer:
         except Exception as e:
             logger.warning(f"Khong the khoi dong PaddleOCR subprocess: {e}")
 
-    # ─── Normalize & validate ────────────────────────────────────────────────
-
     def _normalize_plate(self, text: str) -> str:
         """
         Chuan hoa bien so Viet Nam, sua loi OCR pho bien.
         Dinh dang moi: XX[A-Z][0-9]-XXXXX  vd: 15B4-06744
         Dinh dang cu:  XX[A-Z]-XXXXX        vd: 51A-12345
         """
-        # Su dung OCR sai so thanh chu
-        # Dung o vi tri so (ma tinh p0, p1; chu so p3; suffix): chu → so
+
         CHAR_FIX = str.maketrans({
             'O': '0', 'Q': '0', 'D': '0',
             'I': '1', 'L': '1', '|': '1',
             'Z': '2', 'G': '6', 'T': '7',
             'B': '8', 'S': '5', '$': '5',
         })
-        # Dung o vi tri series (p2): so → chu
+
         DIGIT_TO_CHAR = str.maketrans({
-            '0': 'D',   # 0 ~ D (D la series pho bien VN, O khong hop le)
-            '1': 'T',   # 1 ~ T (T rat pho bien, I khong hop le trong bien so VN)
+            '0': 'D',
+            '1': 'T',
             '5': 'S',
             '6': 'G',
             '8': 'B',
-            '7': 'T',   # 7 ~ T (dang chu T trong mot so font)
-            '9': 'G',   # 9 ~ G
-            '4': 'A',   # 4 ~ A
+            '7': 'T',
+            '9': 'G',
+            '4': 'A',
             '3': 'E',
             '2': 'Z',
         })
-        # Cac chu cai KHONG duoc dung lam series trong bien so VN (I, J, O, W)
-        # Remap ve chu cai hop le tuong tu nhat ve mat thi giac
+
         SERIES_FIX = {
-            'I': 'T',   # I khong ton tai trong bien so VN; T bi mat net ngang -> bi doc la I
-            'J': 'T',   # J cung khong dung
-            'O': 'D',   # O khong dung; D tuong tu nhat (30D, 51D...)
+            'I': 'T',
+            'J': 'T',
+            'O': 'D',
         }
 
-        # Xu ly ranh gioi dong (tu _reconstruct_2line)
-        # Format: "29Y3|03658" → prefix=29Y3, suffix=03658  (chinh xac nhat)
         if '|' in text:
             parts     = text.split('|', 1)
             raw1      = re.sub(r'[^A-Z0-9]', '', parts[0].upper())
@@ -165,7 +152,7 @@ class PlateRecognizer:
                 q1 = raw1[1].translate(CHAR_FIX)
                 q2 = raw1[2] if not raw1[2].isdigit() else raw1[2].translate(DIGIT_TO_CHAR)
                 q2 = SERIES_FIX.get(q2, q2)
-                if len(raw1) >= 4:   # co chu so phu (29Y3)
+                if len(raw1) >= 4:
                     q3     = raw1[3].translate(CHAR_FIX)
                     prefix = q0 + q1 + q2 + q3
                 else:
@@ -181,16 +168,14 @@ class PlateRecognizer:
         p0 = raw[0].translate(CHAR_FIX)
         p1 = raw[1].translate(CHAR_FIX)
         p2 = raw[2] if not raw[2].isdigit() else raw[2].translate(DIGIT_TO_CHAR)
-        p2 = SERIES_FIX.get(p2, p2)   # sua cac ky tu series khong hop le VN
+        p2 = SERIES_FIX.get(p2, p2)
         rest = raw[3:]
 
-        # Dinh dang moi: vi tri 3 la chu so (seri 2 ky tu)
         if rest and rest[0].isdigit() and len(rest) >= 4:
             p3     = rest[0].translate(CHAR_FIX)
             prefix = p0 + p1 + p2 + p3
             suffix = re.sub(r'[^0-9]', '', rest[1:].translate(CHAR_FIX))
-            # Neu p3='0' va suffix co 4 chu so → cung thu dang khong co chu so phu
-            # vi '0' bi nham tu '3','O' → tao them candidate trong caller
+
         else:
             prefix = p0 + p1 + p2
             suffix = re.sub(r'[^0-9]', '', rest.translate(CHAR_FIX))
@@ -215,8 +200,6 @@ class PlateRecognizer:
             return f"{m.group(1)}-0{m.group(2)}"
         return ""
 
-    # ─── ROI detection (khong can YOLO) ─────────────────────────────────────
-
     def _find_plate_roi(self, image: np.ndarray):
         """
         Tim vung bien so bang contour detection.
@@ -226,21 +209,18 @@ class PlateRecognizer:
         h, w = image.shape[:2]
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-        # Tang do tuong phan truoc
         clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
         enhanced = clahe.apply(gray)
 
-        # Gaussian blur de giam nhieu
         blur = cv2.GaussianBlur(enhanced, (5, 5), 0)
 
-        # Thresh: bien so trang/vang = vung sang, chu = toi → invert
         _, th1 = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         th2 = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_MEAN_C,
                                     cv2.THRESH_BINARY_INV, 19, 9)
 
         candidates = []
         for thresh in [th2, cv2.bitwise_not(th1)]:
-            # Di gian de lien ket ky tu tren bien so
+
             kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (20, 6))
             dilated = cv2.dilate(thresh, kernel, iterations=1)
 
@@ -251,36 +231,30 @@ class PlateRecognizer:
                 area = rw * rh
                 ar   = rw / max(rh, 1)
 
-                # Loc theo ty le va kich thuoc
-                if area < w * h * 0.003:   continue   # qua nho
-                if area > w * h * 0.35:    continue   # qua lon
-                if not (1.5 <= ar <= 6.0): continue   # ty le sai
+                if area < w * h * 0.003:   continue
+                if area > w * h * 0.35:    continue
+                if not (1.5 <= ar <= 6.0): continue
 
                 roi_gray = gray[ry:ry + rh, rx:rx + rw]
                 contrast = float(roi_gray.std())
                 if contrast < 20:
-                    continue  # it do tuong phan – khong phai bien so
+                    continue
 
-                # Score: uu tien area vua + do tuong phan cao + ty le bien so xe may (~2)
-                ar_score = 1.0 - abs(ar - 2.5) / 5.0  # peak tai ar=2.5
+                ar_score = 1.0 - abs(ar - 2.5) / 5.0
                 score    = area * max(ar_score, 0.1) * (contrast / 60.0)
                 candidates.append((score, rx, ry, rw, rh))
 
         if not candidates:
             return None
 
-        # Lay candidate co score cao nhat
         candidates.sort(key=lambda c: c[0], reverse=True)
         _, rx, ry, rw, rh = candidates[0]
 
-        # Mo rong nhe vien bien so
         pad = max(4, int(rh * 0.1))
         x1, y1 = max(0, rx - pad), max(0, ry - pad)
         x2, y2 = min(w, rx + rw + pad), min(h, ry + rh + pad)
         roi = image[y1:y2, x1:x2]
         return roi if roi.size > 0 else None
-
-    # ─── OCR helpers ─────────────────────────────────────────────────────────
 
     @staticmethod
     def _to_gray(img):
@@ -299,36 +273,30 @@ class PlateRecognizer:
         return self._preprocess_variants(img_bgr, is_roi=True)[0]
 
     def _preprocess_variants(self, img, is_roi=True):
-        # Buoc 1: Bilateral tren anh goc (nho = nhanh), d=5
-        # QUAN TRONG: bilateral TRUOC khi upscale de tranh xu ly anh 1280px (5x cham hon)
+
         gray_orig  = self._to_gray(img)
         denoised_s = cv2.bilateralFilter(gray_orig, 5, 50, 50)
 
-        # Buoc 2: Scale ve kich thuoc phu hop
         if is_roi:
-            # ROI bien so: upscale de EasyOCR + mag_ratio=1.5 doc ky tu nho
+
             denoised = self._resize_gray(denoised_s, min_w=400, max_w=640)
         else:
-            # Full frame: KHONG upscale (mag_ratio=1.5 trong EasyOCR du, giu toc do)
+
             denoised = self._resize_gray(denoised_s, min_w=320, max_w=480)
 
-        # V1: CLAHE + unsharp mask (tot cho anh thuc te, sang khong deu)
         clahe   = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(4, 4))
         v1_base = clahe.apply(denoised)
         blur1   = cv2.GaussianBlur(v1_base, (0, 0), 2.0)
         v1      = cv2.addWeighted(v1_base, 1.9, blur1, -0.9, 0)
 
-        # V2: Otsu binary (tot khi nen trang roi, chu den ro)
         _, v2 = cv2.threshold(denoised, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-        # V3: Morph-close theo chieu ngang de lien ket net ngang cua T, L, E, F
-        # Kernel ngang (3x1): lien ket cac pixel tren cung hang → ky tu T khong bi mat net ngang
         ker_h  = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 1))
         ker_sq = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
         v3_inv = cv2.bitwise_not(v2)
-        v3_inv = cv2.morphologyEx(v3_inv, cv2.MORPH_CLOSE, ker_h)   # lien ket ngang
-        v3_inv = cv2.morphologyEx(v3_inv, cv2.MORPH_CLOSE, ker_sq)  # lap day lo vuong
-        v3_inv = cv2.morphologyEx(v3_inv, cv2.MORPH_OPEN,  ker_sq)  # xoa dot nhieu
+        v3_inv = cv2.morphologyEx(v3_inv, cv2.MORPH_CLOSE, ker_h)
+        v3_inv = cv2.morphologyEx(v3_inv, cv2.MORPH_CLOSE, ker_sq)
+        v3_inv = cv2.morphologyEx(v3_inv, cv2.MORPH_OPEN,  ker_sq)
         v3     = cv2.bitwise_not(v3_inv)
 
         return [v1, v2, v3]
@@ -364,7 +332,6 @@ class PlateRecognizer:
             self._paddle_proc.stdin.write(msg + '\n')
             self._paddle_proc.stdin.flush()
 
-            # readline() co the block vo han neu subprocess treo → dung thread+timeout
             _q: Queue = Queue()
             def _read_line():
                 try:
@@ -389,7 +356,6 @@ class PlateRecognizer:
             logger.warning(f"PaddleOCR subprocess error: {e}")
             return "", 0.0
 
-
     def _run_ocr_doctr(self, img: np.ndarray) -> tuple:
         """
         Chay doctr OCR. Tra ve (raw_text, confidence).
@@ -398,7 +364,7 @@ class PlateRecognizer:
         if self._doctr is None:
             return "", 0.0
         try:
-            # doctr nhan RGB HxWx3
+
             if img.ndim == 2:
                 rgb = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
             else:
@@ -407,24 +373,22 @@ class PlateRecognizer:
             result = self._doctr([rgb])
             words, confs = [], []
             for page in result.pages:
-                # Thu thap tat ca word tu toan page, sort theo y roi x
+
                 all_words = []
                 for block in page.blocks:
                     for line in block.lines:
                         for word in line.words:
-                            # geometry: [[x0,y0],[x1,y1]] normalized 0-1
+
                             cx = (word.geometry[0][0] + word.geometry[1][0]) / 2
                             cy = (word.geometry[0][1] + word.geometry[1][1]) / 2
                             all_words.append((cy, cx, word.value.upper(), word.confidence))
 
-                # Sort: tren truoc (Y nho), trong cung dong: trai truoc (X nho)
                 all_words.sort(key=lambda w: (round(w[0] * 10), w[1]))
 
-                # Nhom dong (tuong tu _reconstruct_2line)
                 if all_words:
                     rows_d = [[all_words[0]]]
                     for w in all_words[1:]:
-                        if w[0] - rows_d[-1][-1][0] > 0.15:  # Y gap >15% chieu cao
+                        if w[0] - rows_d[-1][-1][0] > 0.15:
                             rows_d.append([])
                         rows_d[-1].append(w)
                     for row in rows_d:
@@ -437,8 +401,6 @@ class PlateRecognizer:
         except Exception as e:
             logger.warning(f"doctr OCR loi: {e}")
             return "", 0.0
-
-    # ─── 2-line plate reconstruction ────────────────────────────────────────
 
     def _reconstruct_2line(self, results: list) -> str:
         """
@@ -456,21 +418,17 @@ class PlateRecognizer:
         if len(results) == 1:
             return results[0][1]
 
-        # Tinh Y trung tam va chieu cao moi box
         def y_mid(r):  return sum(pt[1] for pt in r[0]) / 4
         def box_h(r):  return max(pt[1] for pt in r[0]) - min(pt[1] for pt in r[0])
 
         avg_h = max(sum(box_h(r) for r in results) / len(results), 10)
 
-        # Nhom vao cac dong (dong moi khi gap Y > 40% chieu cao trung binh)
         rows  = [[results[0]]]
         for i in range(1, len(results)):
             if y_mid(results[i]) - y_mid(results[i - 1]) > avg_h * 0.4:
                 rows.append([])
             rows[-1].append(results[i])
 
-        # Moi dong: sort theo X (trai → phai), noi lai
-        # Dung '|' de danh dau ranh gioi giua dong 1 va dong 2
         merged = ""
         for i, row in enumerate(rows):
             row.sort(key=lambda r: min(pt[0] for pt in r[0]))
@@ -479,8 +437,6 @@ class PlateRecognizer:
             merged += "".join(r[1] for r in row)
 
         return merged
-
-    # ─── Main recognize ──────────────────────────────────────────────────────
 
     def recognize(self, image_bytes: bytes, time_budget_s: float = 8.0) -> dict:
         """
@@ -508,15 +464,12 @@ class PlateRecognizer:
         try:
             candidates = []
 
-            # ── Buoc 1: Lay ROI bien so ──────────────────────────────────────
             roi = self._find_plate_roi(image)
             source = roi if roi is not None else image
             source_label = "ROI" if roi is not None else "FULL"
 
-            # ── Buoc 2: PaddleOCR (engine chinh) – dung anh BGR goc ──────────
-            # PaddleOCR co preprocessing noi bo tot → KHONG dung anh binary/threshold
             if self._paddle_proc is not None and self._paddle_proc.poll() is None:
-                # Thu lan luot: anh goc BGR → V1 (CLAHE, it xu ly nhat)
+
                 _paddle_imgs = [source, self._preprocess_variants(source, is_roi=(roi is not None))[0]]
                 for vi, variant in enumerate(_paddle_imgs):
                     raw_p, conf_p = self._run_ocr_paddle(variant)
@@ -524,7 +477,7 @@ class PlateRecognizer:
                     logger.info(f"[{source_label}/Paddle/V{vi+1}] raw='{raw_p}' -> plate='{plate_p}' conf={conf_p:.2f}")
                     if self._is_valid_plate(plate_p):
                         candidates.append((plate_p, conf_p))
-                        # Neu chu so phu = 0 (hiem), cung thu dang 5-chu-so
+
                         alt = self._alt_no_subseries(plate_p)
                         if alt and self._is_valid_plate(alt):
                             candidates.append((alt, conf_p * 0.90))
@@ -539,7 +492,6 @@ class PlateRecognizer:
                                 if self._is_valid_plate(p2):
                                     candidates.append((p2, conf_p * 0.85))
 
-            # ── Buoc 3: EasyOCR (fallback) ───────────────────────────────────
             top_conf = max((c for _, c in candidates), default=0.0)
             if top_conf < 0.80 and _time.time() < _deadline:
                 variants = self._preprocess_variants(source, is_roi=(roi is not None))
@@ -551,11 +503,11 @@ class PlateRecognizer:
                     raw           = self._reconstruct_2line(results)
                     plate         = self._normalize_plate(raw)
                     logger.info(f"[{source_label}/EasyOCR/V{vi+1}] raw='{raw}' -> plate='{plate}' conf={conf:.2f}")
-                    # Cap EasyOCR confidence: character-level prob ≠ plate accuracy
+
                     capped_conf = min(conf, 0.88)
                     if self._is_valid_plate(plate):
                         candidates.append((plate, capped_conf))
-                        # Neu chu so phu = 0 (hiem), cung thu dang 5-chu-so
+
                         alt = self._alt_no_subseries(plate)
                         if alt and self._is_valid_plate(alt):
                             candidates.append((alt, capped_conf * 0.90))
@@ -570,7 +522,6 @@ class PlateRecognizer:
                                 if self._is_valid_plate(p2):
                                     candidates.append((p2, capped_conf * 0.85))
 
-            # ── Buoc 4: Neu ROI that bai, thu toan frame ─────────────────────
             if not candidates and roi is not None and _time.time() < _deadline:
                 for vi, variant in enumerate(self._preprocess_variants(image, is_roi=False)):
                     if _time.time() >= _deadline:
@@ -592,7 +543,6 @@ class PlateRecognizer:
                                 if self._is_valid_plate(p2):
                                     candidates.append((p2, conf * 0.75))
 
-            # ── Buoc 5: doctr LAST RESORT ────────────────────────────────────
             if not candidates and self._doctr is not None and _time.time() < _deadline:
                 best_variant = self._preprocess_variants(source, is_roi=(roi is not None))[0]
                 raw_d, conf_d = self._run_ocr_doctr(best_variant)

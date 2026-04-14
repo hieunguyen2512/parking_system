@@ -28,9 +28,9 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Card */}
+        {}
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-          {/* Header */}
+          {}
           <div className="bg-gradient-to-r from-blue-700 to-blue-600 px-8 py-8 text-center">
             <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-4">
               <ParkingSquare size={32} className="text-white" />
@@ -39,7 +39,7 @@ export default function Login() {
             <p className="text-blue-200 text-sm mt-1">Trường Đại Học Hàng Hải Việt Nam</p>
           </div>
 
-          {/* Form */}
+          {}
           <form onSubmit={handleSubmit} className="px-8 py-8 space-y-5">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">

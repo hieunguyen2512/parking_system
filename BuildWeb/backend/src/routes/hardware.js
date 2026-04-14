@@ -1,16 +1,8 @@
-/**
- * Hardware API – nhận kết quả từ Hardware Bridge, tạo/đóng session
- *
- * Authentication: Header  x-hardware-key: <HARDWARE_API_KEY>
- *
- * POST /api/hardware/entry  – xe vào
- * POST /api/hardware/exit   – xe ra
- */
+
 
 const router  = require('express').Router();
 const { pool }= require('../db');
 
-// ── Middleware xác thực hardware key ─────────────────────────────────────────
 function hardwareAuth(req, res, next) {
   const key = req.headers['x-hardware-key'];
   if (!key || key !== process.env.HARDWARE_API_KEY) {
@@ -19,12 +11,6 @@ function hardwareAuth(req, res, next) {
   next();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// POST /api/hardware/entry
-// Body: { plate, plate_confidence, plate_image_path,
-//         face_user_id, face_confidence, face_image_path,
-//         device_id }
-// ─────────────────────────────────────────────────────────────────────────────
 router.post('/entry', hardwareAuth, async (req, res, next) => {
   const {
     plate            = '',
@@ -43,7 +29,6 @@ router.post('/entry', hardwareAuth, async (req, res, next) => {
 
     const normalizedPlate = plate.trim().toUpperCase().replace(/\s+/g, '');
 
-    // ── 0. Lấy lot_id từ device ──────────────────────────────────────────
     let lotId = null;
     if (devUUID) {
       const dRes = await client.query(
@@ -51,20 +36,18 @@ router.post('/entry', hardwareAuth, async (req, res, next) => {
       );
       lotId = dRes.rows[0]?.lot_id ?? null;
     }
-    // Fallback: lấy lot đầu tiên
+
     if (!lotId) {
       const lRes = await client.query(`SELECT lot_id FROM parking_lots LIMIT 1`);
       lotId = lRes.rows[0]?.lot_id ?? null;
     }
 
-    // ── 1. Ngưỡng nhận diện ─────────────────────────────────────────────
     const PLATE_THRESH = parseFloat(process.env.PLATE_CONF_MIN || '0.5');
     const FACE_THRESH  = parseFloat(process.env.FACE_CONF_MIN  || '0.55');
 
     const plateDetected = !!(normalizedPlate && parseFloat(plate_confidence) >= PLATE_THRESH);
     const faceDetected  = !!(face_user_id    && parseFloat(face_confidence)  >= FACE_THRESH);
 
-    // ── 2. Bắt buộc CẢ HAI nhận diện được ──────────────────────────────
     if (!plateDetected || !faceDetected) {
       await client.query('ROLLBACK');
       const message = !plateDetected && !faceDetected
@@ -76,7 +59,6 @@ router.post('/entry', hardwareAuth, async (req, res, next) => {
       return res.json({ allowed: false, message, session_id: null });
     }
 
-    // ── 3. Tra cứu xe qua biển số ────────────────────────────────────────
     const vRes = await client.query(
       `SELECT v.vehicle_id, v.user_id, u.full_name, u.phone_number, w.balance
        FROM vehicles v
@@ -93,14 +75,12 @@ router.post('/entry', hardwareAuth, async (req, res, next) => {
     const vehicleId   = vRes.rows[0].vehicle_id;
     const plateOwner  = vRes.rows[0].user_id;
 
-    // ── 4. Khuôn mặt phải khớp với chủ xe ───────────────────────────────
     if (plateOwner !== face_user_id) {
       await client.query('ROLLBACK');
       console.warn(`[hardware/entry] Mặt không khớp chủ xe: face=${face_user_id} plate_owner=${plateOwner}`);
       return res.json({ allowed: false, message: 'Khuôn mặt không khớp với chủ xe', session_id: null });
     }
 
-    // ── 5. Gather user info ──────────────────────────────────────────────
     const userId = plateOwner;
     let userInfo = {
       user_id:      userId,
@@ -111,7 +91,6 @@ router.post('/entry', hardwareAuth, async (req, res, next) => {
     let sessionKind = 'member';
     let monthlyPass = null;
 
-    // ── 6. Kiểm tra phiên đang mở ────────────────────────────────────────
     const activeCheck = await client.query(
       `SELECT session_id FROM parking_sessions
        WHERE license_plate = $1 AND status = 'active' LIMIT 1`,
@@ -122,7 +101,6 @@ router.post('/entry', hardwareAuth, async (req, res, next) => {
       return res.json({ allowed: false, message: 'Biển số xe đang trong bãi', session_id: null });
     }
 
-    // ── 7. Kiểm tra vé tháng ─────────────────────────────────────────────
     const mpRes = await client.query(
       `SELECT mp.pass_id, mp.valid_until, mp.status, pl.name AS lot_name
        FROM monthly_passes mp
@@ -133,10 +111,9 @@ router.post('/entry', hardwareAuth, async (req, res, next) => {
     );
     if (mpRes.rows[0]) monthlyPass = mpRes.rows[0];
 
-    // ── 8. Tạo session ────────────────────────────────────────────────────
     let sessionId;
     const compositeImagePath = plate_image_path;
-    const sessionPlate = normalizedPlate;  // đã xác thực ở trên, chắc chắn có
+    const sessionPlate = normalizedPlate;
 
     const sRes = await client.query(
       `INSERT INTO parking_sessions
@@ -152,7 +129,6 @@ router.post('/entry', hardwareAuth, async (req, res, next) => {
     );
     sessionId = sRes.rows[0].session_id;
 
-    // ── 7. Event log ─────────────────────────────────────────────────────
     await client.query(
       `INSERT INTO event_logs (event_type, device_id, description)
        VALUES ('VEHICLE_ENTRY', $1, $2)`,
@@ -161,7 +137,6 @@ router.post('/entry', hardwareAuth, async (req, res, next) => {
 
     await client.query('COMMIT');
 
-    // ── 8. Emit real-time qua Socket.IO ──────────────────────────────────
     const io = req.app.get('io');
     if (io) {
       io.emit('vehicle:entry', {
@@ -193,10 +168,6 @@ router.post('/entry', hardwareAuth, async (req, res, next) => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// POST /api/hardware/exit
-// Body: { plate, plate_confidence, plate_image_path, face_image_path, device_id }
-// ─────────────────────────────────────────────────────────────────────────────
 router.post('/exit', hardwareAuth, async (req, res, next) => {
   const {
     plate            = '',
@@ -215,12 +186,11 @@ router.post('/exit', hardwareAuth, async (req, res, next) => {
 
     const normalizedPlate = plate.trim().toUpperCase().replace(/\s+/g, '');
 
-    // ── 1. Tìm phiên đang mở ─────────────────────────────────────────────
     let session     = null;
     let sessionKind = null;
 
     if (normalizedPlate) {
-      // Thử member session trước
+
       const mRes = await client.query(
         `SELECT ps.session_id, ps.entry_time, ps.user_id, ps.vehicle_id,
                 ps.license_plate, ps.session_type,
@@ -238,7 +208,7 @@ router.post('/exit', hardwareAuth, async (req, res, next) => {
         session     = mRes.rows[0];
         sessionKind = 'member';
       } else {
-        // Guest session
+
         const gRes = await client.query(
           `SELECT session_id, entry_time, license_plate,
                   NULL::uuid AS user_id, 'guest' AS kind
@@ -254,7 +224,6 @@ router.post('/exit', hardwareAuth, async (req, res, next) => {
       }
     }
 
-    // ── 1b. Nếu chưa tìm thấy qua biển số, thử face ─────────────────────
     if (!session && face_user_id && face_confidence >= parseFloat(process.env.FACE_CONF_MIN || '0.55')) {
       const fRes = await client.query(
         `SELECT ps.session_id, ps.entry_time, ps.user_id, ps.vehicle_id,
@@ -275,19 +244,17 @@ router.post('/exit', hardwareAuth, async (req, res, next) => {
       }
     }
 
-    // ── 2. Nếu không tìm thấy, vẫn mở barrier ────────────────────────────
     if (!session) {
       await client.query('ROLLBACK');
       console.warn(`[hardware/exit] Không tìm thấy phiên cho biển số: ${normalizedPlate}`);
       return res.json({
-        allowed:    true,   // vẫn cho ra để không cản xe
+        allowed:    true,
         session_id: null,
         fee:        0,
         message:    `Không tìm thấy phiên cho biển số ${normalizedPlate || 'không rõ'}`,
       });
     }
 
-    // ── 3. Kiểm tra vé tháng tại lúc ra (không phụ thuộc session_type) ─────
     let hasMonthlyPassExit = false;
     if (sessionKind === 'member' && session.vehicle_id) {
       const mpExitRes = await client.query(
@@ -299,7 +266,6 @@ router.post('/exit', hardwareAuth, async (req, res, next) => {
       hasMonthlyPassExit = !!mpExitRes.rows[0];
     }
 
-    // ── 4. Tính phí ──────────────────────────────────────────────────────
     let fee = 0;
 
     if (hasMonthlyPassExit) {
@@ -329,11 +295,10 @@ router.post('/exit', hardwareAuth, async (req, res, next) => {
           minimum_fee || 0
         );
       } else {
-        fee = Math.ceil(durationHours * 5000); // fallback 5000đ/giờ
+        fee = Math.ceil(durationHours * 5000);
       }
     }
 
-    // ── 4. Trừ tiền ví (member session) ──────────────────────────────────
     if (sessionKind === 'member' && fee > 0) {
       const walletRes = await client.query(
         `UPDATE wallets SET balance = balance - $1, updated_at = NOW()
@@ -343,11 +308,11 @@ router.post('/exit', hardwareAuth, async (req, res, next) => {
       );
 
       if (!walletRes.rows[0]) {
-        // Không đủ tiền – vẫn cho ra nhưng ghi nợ
+
         console.warn(`[hardware/exit] Ví không đủ – ghi nợ ${fee}đ user ${session.user_id}`);
-        fee = 0; // không trừ tiền, gateway xử lý sau
+        fee = 0;
       } else {
-        // Ghi transaction
+
         await client.query(
           `INSERT INTO wallet_transactions
              (wallet_id, user_id, transaction_type, amount,
@@ -364,7 +329,6 @@ router.post('/exit', hardwareAuth, async (req, res, next) => {
       }
     }
 
-    // ── 5. Đóng session ──────────────────────────────────────────────────
     if (sessionKind === 'member') {
       await client.query(
         `UPDATE parking_sessions
@@ -383,7 +347,6 @@ router.post('/exit', hardwareAuth, async (req, res, next) => {
       );
     }
 
-    // ── 6. Event log ─────────────────────────────────────────────────────
     await client.query(
       `INSERT INTO event_logs (event_type, device_id, description)
        VALUES ('VEHICLE_EXIT', $1, $2)`,
@@ -392,7 +355,6 @@ router.post('/exit', hardwareAuth, async (req, res, next) => {
 
     await client.query('COMMIT');
 
-    // ── 7. Emit real-time ────────────────────────────────────────────────
     const io = req.app.get('io');
     if (io) {
       io.emit('vehicle:exit', {
@@ -428,10 +390,6 @@ router.post('/exit', hardwareAuth, async (req, res, next) => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GET /api/hardware/registered-plates
-// Trả về danh sách biển số đang hoạt động trong hệ thống (dùng cho test script)
-// ─────────────────────────────────────────────────────────────────────────────
 router.get('/registered-plates', hardwareAuth, async (req, res, next) => {
   try {
     const { rows } = await pool.query(
@@ -447,11 +405,6 @@ router.get('/registered-plates', hardwareAuth, async (req, res, next) => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GET /api/hardware/registered-vehicles
-// Trả về danh sách user có CẢ khuôn mặt lẫn biển số đã đăng ký.
-// Dùng cho Dual-Auth Gate: chỉ cấp phép khi plate + face cùng 1 user.
-// ─────────────────────────────────────────────────────────────────────────────
 router.get('/registered-vehicles', hardwareAuth, async (req, res, next) => {
   try {
     const { rows } = await pool.query(

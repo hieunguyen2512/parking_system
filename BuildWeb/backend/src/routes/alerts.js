@@ -2,7 +2,6 @@ const router = require('express').Router();
 const auth = require('../middleware/auth');
 const { pool } = require('../db');
 
-// GET /api/alerts?status=unresolved&severity=
 router.get('/', auth, async (req, res, next) => {
   try {
     const { status, severity, page = 1, limit = 50 } = req.query;
@@ -45,7 +44,6 @@ router.get('/', auth, async (req, res, next) => {
   }
 });
 
-// PATCH /api/alerts/:id/resolve
 router.patch('/:id/resolve', auth, async (req, res, next) => {
   try {
     const { note } = req.body;

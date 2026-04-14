@@ -11,7 +11,7 @@ function userAuthMiddleware(req, res, next) {
     if (decoded.type !== 'user') {
       return res.status(403).json({ error: 'Token không hợp lệ cho người dùng' });
     }
-    req.user = decoded; // { id, phone, type: 'user' }
+    req.user = decoded;
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Token không hợp lệ hoặc đã hết hạn' });

@@ -35,21 +35,19 @@ export default function Sessions() {
   const [historyLoading, setHistoryLoading] = useState(false)
   const [activeLoading, setActiveLoading]   = useState(false)
 
-  // Tải phiên đang hoạt động
   const loadActive = useCallback(async () => {
     setActiveLoading(true)
     await fetchActiveSessions()
     setActiveLoading(false)
   }, [fetchActiveSessions])
 
-  // Tải lịch sử phiên (completed + force_ended)
   const loadHistory = useCallback(async () => {
     setHistoryLoading(true)
     try {
       const params = { limit: 100 }
       if (search) params.search = search
       const res = await sessionsApi.list(params)
-      // Lọc bỏ active ra, chỉ hiển thị đã hoàn thành
+
       const done = (res.data || []).filter(s => s.status !== 'active')
       setHistory(done)
       setHistoryTotal(done.length)
@@ -76,7 +74,7 @@ export default function Sessions() {
 
   return (
     <div className="space-y-5">
-      {/* Toolbar */}
+      {}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
           {[['active','Đang đỗ'], ['history','Lịch sử']].map(([v, l]) => (
@@ -121,7 +119,7 @@ export default function Sessions() {
         )}
       </div>
 
-      {/* Table */}
+      {}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         {tab === 'active' ? (
           <>
@@ -231,7 +229,7 @@ export default function Sessions() {
         )}
       </div>
 
-      {/* Session Detail Modal */}
+      {}
       {detail && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
@@ -273,7 +271,7 @@ export default function Sessions() {
         </div>
       )}
 
-      {/* Force End Modal */}
+      {}
       {forceEndModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">

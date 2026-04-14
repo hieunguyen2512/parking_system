@@ -6,11 +6,7 @@ from threading import Lock
 from typing import Optional
 import config
 
-# ── Placeholder JPEG đen 320×240 ─────────────────────────────────────────────
-# Dùng khi camera chưa mở được để giữ kết nối MJPEG của browser (không bao giờ
-# để stream trả về 0 bytes – Chrome sẽ cắt kết nối và không tự reconnect).
 _PLACEHOLDER_JPEG: Optional[bytes] = None
-
 
 def get_placeholder_jpeg() -> bytes:
     """Trả về JPEG đen nhỏ (lazy-init). Thread-safe vì GIL bảo vệ phép gán bytes."""
@@ -22,7 +18,7 @@ def get_placeholder_jpeg() -> bytes:
             _, buf = cv2.imencode(".jpg", black, [cv2.IMWRITE_JPEG_QUALITY, 50])
             _PLACEHOLDER_JPEG = buf.tobytes()
         except Exception:
-            # Fallback: JPEG 1×1 đen tối thiểu hợp lệ
+
             _PLACEHOLDER_JPEG = (
                 b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
                 b"\xff\xdb\x00C\x00\x08\x06\x06\x07\x06\x05\x08\x07\x07\x07\t\t"
@@ -46,14 +42,9 @@ def get_placeholder_jpeg() -> bytes:
 
 logger = logging.getLogger(__name__)
 
-# Chế độ chụp:
-#   LAZY  – mở camera, chụp, đóng ngay (phù hợp trigger-based, dùng chung hub)
-#   KEEP  – giữ camera mở liên tục (phù hợp khi camera cắm riêng port)
 CAPTURE_MODE = getattr(config, "CAPTURE_MODE", "LAZY")
 
-# Số frame warm-up: LAZY cần đợi sensor tự động phơi sáng ổn định
 WARMUP_FRAMES = getattr(config, "WARMUP_FRAMES", 5)
-
 
 class CameraManager:
     """
@@ -74,16 +65,16 @@ class CameraManager:
 
     def __init__(self):
         self._cameras: dict[int, cv2.VideoCapture] = {}
-        self._lock     = Lock()              # chỉ dùng cho LAZY mode (global)
-        self._cam_locks: dict[int, Lock] = {}  # mỗi camera 1 lock riêng cho KEEP mode
-        self._init_lock = Lock()             # tuần tự hoá việc mở camera (tránh MSMF quá tải)
-        # Track zombie MSMF threads – không reattempt MSMF khi thread cũ chưa xong
+        self._lock     = Lock()
+        self._cam_locks: dict[int, Lock] = {}
+        self._init_lock = Lock()
+
         self._msmf_pending: dict[int, threading.Thread] = {}
-        # Đếm số lần MSMF timeout để bỏ qua MSMF sau ngưỡng
+
         self._msmf_timeout_count: dict[int, int] = {}
-        # Camera bị aliased (DSHOW wraparound) – không đưa vào pool, trả placeholder
+
         self._aliased_indices: set[int] = set()
-        # Fingerprint của mỗi camera đã mở thành công (dùng để phát hiện aliasing sau)
+
         self._cam_fingerprints: dict[int, bytes] = {}
         logger.info(f"CameraManager khoi dong, che do: {CAPTURE_MODE}")
 
@@ -99,7 +90,6 @@ class CameraManager:
             self._cam_locks[cam_index] = Lock()
         return self._cam_locks[cam_index]
 
-    # ── Internal open với retry ──────────────────────────────────────────
     def _open_cap(self, cam_index: int) -> cv2.VideoCapture:
         """Mở camera và đặt độ phân giải.
         Dùng DSHOW trước (ổn định hơn MSMF khi stream đa camera liên tục),
@@ -116,15 +106,14 @@ class CameraManager:
                         try: cap.release()
                         except Exception: pass
                     continue
-                # Đọc native resolution TRƯỚC – tránh MSMF treo khi ép 1920x1080
-                # lên camera chỉ hỗ trợ 640x480
+
                 native_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                 native_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                 if native_w >= config.CAMERA_WIDTH and native_h >= config.CAMERA_HEIGHT:
-                    # Camera hỗ trợ native >= yêu cầu – đặt resolution
+
                     cap.set(cv2.CAP_PROP_FRAME_WIDTH,  config.CAMERA_WIDTH)
                     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config.CAMERA_HEIGHT)
-                # else: dùng native resolution (vd 640x480)
+
                 cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
                 cap.set(cv2.CAP_PROP_FPS, getattr(config, "CAMERA_FPS", 15))
                 final_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -143,10 +132,10 @@ class CameraManager:
         is_msmf = (backend == cv2.CAP_MSMF)
 
         if is_msmf:
-            # Bỏ qua MSMF nếu đã timeout quá nhiều lần
+
             if self._msmf_timeout_count.get(cam_index, 0) >= 2:
                 return None
-            # Bỏ qua MSMF nếu thread cũ vẫn còn alive (zombie)
+
             prev = self._msmf_pending.get(cam_index)
             if prev and prev.is_alive():
                 logger.debug(f"Camera {cam_index} MSMF thread still alive – skip new open")
@@ -173,26 +162,23 @@ class CameraManager:
             return None
         if exc[0]:
             return None
-        # Thread hoàn thành → reset timeout count nếu thành công
+
         if result[0] and result[0].isOpened() and is_msmf:
             self._msmf_timeout_count[cam_index] = 0
         return result[0]
 
-    # ─── Warm-up: đợi MSMF pipeline khởi động, lấy frame đầu tiên ────────────
     def _warmup(self, cap: cv2.VideoCapture, n: int = WARMUP_FRAMES):
         """Chờ MSMF pipeline sẵn sàng. Retry tối đa 8 lần × 0.1s = 0.8 giây."""
-        time.sleep(0.05)   # cho MSMF bắt đầu SourceReader async
+        time.sleep(0.05)
         for attempt in range(8):
             ret, frame = cap.read()
             if ret and frame is not None:
-                # Pipeline sẵn sàng – warm thêm (n-1) frame
+
                 for _ in range(max(0, n - 1)):
                     cap.read()
                 return
             time.sleep(0.1)
-        # Pipeline thất bại – tiếp tục (caller sẽ phát hiện khi cap.read() fail)
 
-    # ─── Public: capture ────────────────────────────────────────────────────
     def capture(self, cam_index: int, retries: int = 3) -> Optional[bytes]:
         """
         Chụp 1 frame từ camera.
@@ -203,7 +189,6 @@ class CameraManager:
         else:
             return self._capture_keep(cam_index, retries)
 
-    # ─── Frame fingerprint để phát hiện camera aliased (Windows MSMF bug) ────────
     @staticmethod
     def _frame_fingerprint(frame) -> bytes:
         """Resize về 8×8 grayscale, dùng để so sánh frame hai camera.
@@ -220,14 +205,14 @@ class CameraManager:
         if len(fp1) != len(fp2):
             return False
         diff = sum(abs(a - b) for a, b in zip(fp1, fp2))
-        # 64 × 255 × 0.005 ≈ 81 – chỉ bắt MSMF aliased (cùng frame buffer, diff = 0)
+
         return diff < 81
 
     def _capture_lazy(self, cam_index: int, retries: int) -> Optional[bytes]:
         """Mở → warm-up → chụp → đóng.
         Dùng per-camera lock để các cam KHÁC nhau có thể chụp song song.
         """
-        with self._get_cam_lock(cam_index):   # chỉ khoá chính cam_index, không block cam khác
+        with self._get_cam_lock(cam_index):
             for attempt in range(retries):
                 cap = None
                 try:
@@ -257,12 +242,12 @@ class CameraManager:
         lock = self._get_cam_lock(cam_index)
         for attempt in range(retries):
             try:
-                # Fast path: camera đã mở sẵn
+
                 with lock:
                     if (cam_index not in self._cameras
                             or not self._cameras[cam_index].isOpened()):
-                        # Slow path: mở camera – tuần tự qua _init_lock
-                        pass  # fall through
+
+                        pass
                     else:
                         cap = self._cameras[cam_index]
                         ret, frame = cap.read()
@@ -272,7 +257,6 @@ class CameraManager:
                                              [cv2.IMWRITE_JPEG_QUALITY, 90])
                         return buf.tobytes()
 
-                # Camera chưa mở – dùng _init_lock để tránh MSMF quá tải
                 with self._init_lock:
                     with lock:
                         if (cam_index not in self._cameras
@@ -309,14 +293,14 @@ class CameraManager:
         if CAPTURE_MODE != "KEEP":
             return
         MAX_WARM_RETRIES = 3
-        for idx in sorted(cam_indices):  # mở theo thứ tự index tăng dần cho nhất quán
+        for idx in sorted(cam_indices):
             success = False
             for attempt in range(MAX_WARM_RETRIES):
                 cap = None
                 try:
-                    with self._init_lock:   # tuần tự hoá với browser stream requests
+                    with self._init_lock:
                         cap = self._open_cap(idx)
-                        # Thử đọc frame thực – nếu không được thì loại camera này
+
                         ok = False
                         for _ in range(WARMUP_FRAMES + 5):
                             ret, frame = cap.read()
@@ -326,9 +310,7 @@ class CameraManager:
                             time.sleep(0.1)
                         if not ok:
                             raise RuntimeError(f"Camera {idx} opened but no frames (broken pipeline)")
-                        # ── Anti-aliasing: kiểm tra frame trùng với camera đã mở ──────────
-                        # DSHOW trên Windows wrap index khi không đủ camera vật lý,
-                        # ví dụ index 2 → trả lại camera 0, index 3 → trả lại camera 1.
+
                         fp_new = self._frame_fingerprint(frame)
                         for open_idx, fp_existing in self._cam_fingerprints.items():
                             if self._fingerprints_aliased(fp_new, fp_existing):
@@ -339,7 +321,7 @@ class CameraManager:
                         lock = self._get_cam_lock(idx)
                         with lock:
                             self._cameras[idx] = cap
-                            cap = None  # pool giữ, không release
+                            cap = None
                         self._cam_fingerprints[idx] = fp_new
                     logger.info(f"Camera {idx} pre-warmed OK (attempt {attempt + 1})")
                     success = True
@@ -350,7 +332,7 @@ class CameraManager:
                         try: cap.release()
                         except Exception: pass
                     if attempt < MAX_WARM_RETRIES - 1:
-                        time.sleep(2.0)  # chờ Windows driver ổn định trước khi retry
+                        time.sleep(2.0)
             if not success:
                 self._aliased_indices.add(idx)
                 logger.error(f"Camera {idx} warm thất bại sau {MAX_WARM_RETRIES} lần – sẽ hiển thị màn đen")
@@ -363,13 +345,12 @@ class CameraManager:
           tránh MSMF bị quá tải khi 4 stream khởi động cùng lúc).
         Camera bị aliased (DSHOW wraparound) → trả None ngay (→ placeholder đen).
         """
-        # Camera đã xác định là aliased / không tồn tại → đừng thử mở nữa
+
         if cam_index in self._aliased_indices:
             return None
 
         cam_lock = self._get_cam_lock(cam_index)
 
-        # ── Fast path ────────────────────────────────────────────────────────
         with cam_lock:
             cap = self._cameras.get(cam_index)
             if cap and cap.isOpened():
@@ -381,23 +362,22 @@ class CameraManager:
                         return buf.tobytes()
                 except Exception as e:
                     logger.warning(f"stream_frame read cam{cam_index}: {e}")
-                # Frame thất bại – xóa khỏi pool, rơi xuống slow path
+
                 try:
                     self._cameras[cam_index].release()
                 except Exception:
                     pass
                 del self._cameras[cam_index]
 
-        # ── Slow path: mở camera, tuần tự hoá bằng _init_lock ────────────────
-        with self._init_lock:          # chỉ 1 camera được mở tại một thời điểm
+        with self._init_lock:
             with cam_lock:
-                # Kiểm tra lại: thread khác có thể đã mở trong lúc đợi lock
+
                 cap = self._cameras.get(cam_index)
                 if not cap or not cap.isOpened():
                     try:
                         cap = self._open_cap(cam_index)
                         self._warmup(cap)
-                        # Kiểm tra aliasing trước khi đưa vào pool
+
                         ret_a, frame_a = cap.read()
                         if ret_a and frame_a is not None:
                             fp_new = self._frame_fingerprint(frame_a)
@@ -416,7 +396,6 @@ class CameraManager:
                         logger.warning(f"stream_frame init cam{cam_index}: {e}")
                         self._aliased_indices.add(cam_index)
                         return None
-        # _init_lock đã release – đọc frame đầu tiên NGOÀI lock để không chặn cam khác
 
         with cam_lock:
             cap = self._cameras.get(cam_index)
@@ -452,7 +431,7 @@ class CameraManager:
         result = []
 
         if CAPTURE_MODE == "KEEP":
-            # KEEP mode: ưu tiên cameras trong pool, fallback probe cameras chưa mở
+
             seen_fingerprints: list = []
             for i in range(6):
                 cam_lock = self._get_cam_lock(i)
@@ -462,7 +441,7 @@ class CameraManager:
                 try:
                     cap = self._cameras.get(i)
                     if cap and cap.isOpened():
-                        # Camera đã trong pool – lấy frame để kiểm tra + fingerprint
+
                         frames = []
                         for _ in range(6):
                             ret, frm = cap.read()
@@ -486,7 +465,7 @@ class CameraManager:
                                     "height": int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
                                 })
                     else:
-                        # Camera chưa trong pool – probe nhanh với timeout 1.5s
+
                         probe = self._try_open_cap(i, cv2.CAP_MSMF, timeout=1.5)
                         if probe is None or not probe.isOpened():
                             if probe: probe.release()
@@ -517,13 +496,11 @@ class CameraManager:
                             probe.release()
                         elif probe:
                             probe.release()
-                        time.sleep(0.5)  # USB hub cần time giải phóng sau probe
+                        time.sleep(0.5)
                 finally:
                     cam_lock.release()
         else:
-            # LAZY mode: probe nhanh với timeout, kiểm tra frame thực
-            # Dùng per-camera lock với timeout để không bỏ lỡ cam đang được keepalive dùng
-            # Fingerprint ngưỡng 0.5% – chỉ loại aliased thật sự
+
             seen_fingerprints: list = []
             time.sleep(0.3)
             for i in range(6):
@@ -538,7 +515,7 @@ class CameraManager:
                         if cap: cap.release()
                         cap = self._try_open_cap(i, cv2.CAP_DSHOW, timeout=1.5)
                     if cap and cap.isOpened():
-                        # Lấy 2 frame để phát hiện aliased qua temporal diff
+
                         frames = []
                         for _ in range(12):
                             ret, frm = cap.read()
@@ -551,19 +528,15 @@ class CameraManager:
                         if frames:
                             fp = self._frame_fingerprint(frames[0])
 
-                            # Nếu có 2 frame: kiểm tra temporal diff.
-                            # MSMF aliased trả về frame giống hệt → temporal diff = 0
-                            # Camera thật luôn có pixel noise nhỏ → diff > 0
                             if len(frames) >= 2:
                                 fp2_temp = self._frame_fingerprint(frames[1])
                                 temporal_diff = sum(abs(a - b) for a, b in zip(fp, fp2_temp))
                             else:
-                                temporal_diff = 99  # không đủ frame – giả sử không aliased
+                                temporal_diff = 99
 
                             aliased_by_spatial  = any(self._fingerprints_aliased(fp, prev)
                                                       for prev in seen_fingerprints)
-                            # Aliased nếu: fingerprint rất giống cam trước
-                            #             VÀ temporal diff = 0 (frame giống hệt nhau)
+
                             truly_aliased = aliased_by_spatial and (temporal_diff < 5)
 
                             if truly_aliased:
@@ -578,7 +551,7 @@ class CameraManager:
                         cap.release()
                     elif cap:
                         cap.release()
-                    # Delay dài hơn giữa các cam – USB hub cần thời gian giải phóng bandwidth
+
                     time.sleep(0.5)
                 finally:
                     cam_lock.release()

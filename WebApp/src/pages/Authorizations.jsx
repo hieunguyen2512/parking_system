@@ -25,7 +25,7 @@ export default function Authorizations() {
 
   return (
     <div className="p-4 space-y-5">
-      {/* Hướng dẫn */}
+      {}
       <div className="card bg-blue-50 border-blue-100">
         <p className="text-sm text-blue-700">
           <span className="font-semibold">Ủy quyền lấy xe</span> cho phép người khác lấy xe của bạn tại bãi
@@ -34,7 +34,7 @@ export default function Authorizations() {
         </p>
       </div>
 
-      {/* Đang hoạt động */}
+      {}
       <div>
         <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
           Đang hiệu lực ({active.length})
@@ -79,7 +79,7 @@ export default function Authorizations() {
         )}
       </div>
 
-      {/* Đã hết hiệu lực */}
+      {}
       {inactive.length > 0 && (
         <div>
           <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">

@@ -2,7 +2,6 @@ const router = require('express').Router();
 const { pool } = require('../../db');
 const userAuth = require('../../middleware/userAuth');
 
-// GET /api/user/monthly-passes  – danh sách vé tháng của user
 router.get('/', userAuth, async (req, res, next) => {
   try {
     const result = await pool.query(
@@ -21,7 +20,6 @@ router.get('/', userAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/user/monthly-passes/price  – lấy giá vé tháng hiện tại
 router.get('/price', userAuth, async (req, res, next) => {
   try {
     const result = await pool.query(
@@ -32,7 +30,6 @@ router.get('/price', userAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// POST /api/user/monthly-passes  – mua vé tháng
 router.post('/', userAuth, async (req, res, next) => {
   try {
     const { vehicle_id, lot_id, months = 1 } = req.body;
@@ -48,7 +45,6 @@ router.post('/', userAuth, async (req, res, next) => {
     try {
       await client.query('BEGIN');
 
-      // Kiểm tra xe thuộc user
       const vehicleRes = await client.query(
         'SELECT vehicle_id, license_plate FROM vehicles WHERE vehicle_id = $1 AND user_id = $2 AND is_active',
         [vehicle_id, req.user.id]
@@ -59,7 +55,6 @@ router.post('/', userAuth, async (req, res, next) => {
       }
       const vehicle = vehicleRes.rows[0];
 
-      // Kiểm tra bãi đỗ
       const lotRes = await client.query(
         'SELECT lot_id, name FROM parking_lots WHERE lot_id = $1 AND is_active',
         [lot_id]
@@ -69,7 +64,6 @@ router.post('/', userAuth, async (req, res, next) => {
         return res.status(404).json({ error: 'Không tìm thấy bãi đỗ xe' });
       }
 
-      // Kiểm tra xe có vé tháng còn hiệu lực không
       const activePass = await client.query(
         `SELECT 1 FROM monthly_passes
          WHERE vehicle_id = $1 AND lot_id = $2 AND status = 'active' AND valid_until >= CURRENT_DATE`,
@@ -80,14 +74,12 @@ router.post('/', userAuth, async (req, res, next) => {
         return res.status(409).json({ error: 'Xe này đã có vé tháng còn hiệu lực tại bãi đỗ đã chọn' });
       }
 
-      // Lấy giá vé tháng
       const priceRes = await client.query(
         `SELECT config_value FROM system_configs WHERE config_key = 'monthly_pass_price'`
       );
       const pricePerMonth = priceRes.rows[0] ? parseInt(priceRes.rows[0].config_value) : 200000;
       const totalFee = pricePerMonth * numMonths;
 
-      // Kiểm tra và trừ ví (SELECT FOR UPDATE)
       const walletRes = await client.query(
         'SELECT wallet_id, balance FROM wallets WHERE user_id = $1 FOR UPDATE',
         [req.user.id]
@@ -111,7 +103,6 @@ router.post('/', userAuth, async (req, res, next) => {
         [newBalance, wallet.wallet_id]
       );
 
-      // Ghi giao dịch ví
       const txRes = await client.query(
         `INSERT INTO wallet_transactions
            (wallet_id, user_id, transaction_type, amount, balance_before, balance_after, payment_gateway, status, description)
@@ -122,13 +113,11 @@ router.post('/', userAuth, async (req, res, next) => {
       );
       const txId = txRes.rows[0].transaction_id;
 
-      // Tính ngày hiệu lực
       const validFrom = new Date();
       const validUntil = new Date(validFrom);
       validUntil.setMonth(validUntil.getMonth() + numMonths);
-      validUntil.setDate(validUntil.getDate() - 1); // hết ngày cuối tháng
+      validUntil.setDate(validUntil.getDate() - 1);
 
-      // Tạo vé tháng
       const passRes = await client.query(
         `INSERT INTO monthly_passes
            (user_id, vehicle_id, lot_id, license_plate, valid_from, valid_until, fee_paid, wallet_tx_id, status)
@@ -155,7 +144,6 @@ router.post('/', userAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// DELETE /api/user/monthly-passes/:id  – huỷ vé tháng (hoàn tiền theo tỉ lệ)
 router.delete('/:id', userAuth, async (req, res, next) => {
   try {
     const client = await pool.connect();
@@ -176,7 +164,6 @@ router.delete('/:id', userAuth, async (req, res, next) => {
         return res.status(400).json({ error: 'Chỉ có thể huỷ vé đang hoạt động' });
       }
 
-      // Tính hoàn tiền: tỉ lệ ngày còn lại / tổng số ngày
       const today = new Date();
       const validUntil = new Date(pass.valid_until);
       const validFrom = new Date(pass.valid_from);
@@ -184,14 +171,12 @@ router.delete('/:id', userAuth, async (req, res, next) => {
       const remainingDays = Math.max(0, Math.ceil((validUntil - today) / 86400000));
       const refundAmount = Math.floor((remainingDays / totalDays) * parseFloat(pass.fee_paid));
 
-      // Cập nhật vé
       await client.query(
         `UPDATE monthly_passes SET status = 'cancelled', note = 'Người dùng huỷ', updated_at = NOW()
          WHERE pass_id = $1`,
         [req.params.id]
       );
 
-      // Hoàn tiền nếu > 0
       if (refundAmount > 0) {
         const walletRes = await client.query(
           'SELECT wallet_id, balance FROM wallets WHERE user_id = $1 FOR UPDATE',

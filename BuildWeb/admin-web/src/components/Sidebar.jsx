@@ -17,7 +17,7 @@ const mainNavItems = [
 ]
 
 const connectNavItems = [
-  { to: '/devices', icon: Cpu, label: 'Thiết bị' },
+  { to: '/devices', icon: Cpu, label: 'Vận hành' },
 ]
 
 export default function Sidebar() {
@@ -29,7 +29,7 @@ export default function Sidebar() {
 
   return (
     <div className="flex flex-col w-64 min-h-screen bg-slate-900 text-white shrink-0">
-      {/* Brand */}
+      {}
       <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-700">
         <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center">
           <ParkingSquare size={20} />
@@ -40,9 +40,9 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Nav */}
+      {}
       <nav className="flex-1 px-3 py-4 overflow-y-auto">
-        {/* Main items */}
+        {}
         <div className="space-y-0.5">
           {mainNavItems.map(({ to, icon: Icon, label, exact }) => (
             <NavLink
@@ -69,13 +69,9 @@ export default function Sidebar() {
           ))}
         </div>
 
-        {/* Kết nối section */}
+        {}
         <div className="mt-5">
           <div className="flex items-center gap-2 px-3 mb-1.5">
-            <Link2 size={13} className="text-slate-500" />
-            <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">
-              Kết nối
-            </span>
           </div>
           <div className="space-y-0.5">
             {connectNavItems.map(({ to, icon: Icon, label }) => (
@@ -99,7 +95,7 @@ export default function Sidebar() {
         </div>
       </nav>
 
-      {/* Admin info + logout */}
+      {}
       <div className="px-3 py-4 border-t border-slate-700">
         <div className="flex items-center gap-3 px-2 mb-3">
           <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-sm font-bold">

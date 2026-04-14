@@ -49,7 +49,7 @@ export default function Sessions() {
 
   return (
     <div className="p-4 space-y-4">
-      {/* Bộ lọc */}
+      {}
       <div className="flex gap-2 overflow-x-auto pb-1">
         {STATUS_OPTS.map(opt => (
           <button
@@ -65,7 +65,7 @@ export default function Sessions() {
         ))}
       </div>
 
-      {/* Tổng số */}
+      {}
       <p className="text-sm text-slate-400">{sessionsTotal} phiên gửi xe</p>
 
       {loading && (
@@ -79,7 +79,7 @@ export default function Sessions() {
         </div>
       )}
 
-      {/* Danh sách */}
+      {}
       <div className="space-y-3">
         {sessions.map(s => (
           <div key={s.id} className="card">
@@ -128,7 +128,7 @@ export default function Sessions() {
         ))}
       </div>
 
-      {/* Phân trang */}
+      {}
       {totalPages > 1 && (
         <div className="flex justify-center gap-2 pt-2">
           <button

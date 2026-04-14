@@ -7,7 +7,7 @@ const titles = {
   '/':         'Tổng quan',
   '/sessions': 'Phiên gửi xe',
   '/users':    'Người dùng',
-  '/devices':  'Thiết bị',
+  '/devices':  'Vận hành',
   '/events':   'Nhật ký sự kiện',
   '/reports':  'Báo cáo & Thống kê',
   '/alerts':   'Cảnh báo hệ thống',
@@ -41,25 +41,25 @@ export default function Header() {
         {titles[pathname] ?? 'Tổng quan'}
       </h1>
 
-      {/* Live badge */}
+      {}
       <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
         <span className="live-dot w-2 h-2 rounded-full bg-emerald-500 inline-block" />
         LIVE
       </div>
 
-      {/* Connection */}
+      {}
       <div className={`flex items-center gap-1 text-xs font-medium ${online ? 'text-emerald-600' : 'text-rose-600'}`}>
         {online ? <Wifi size={14} /> : <WifiOff size={14} />}
         {online ? 'Đã kết nối' : 'Offline'}
       </div>
 
-      {/* DateTime */}
+      {}
       <div className="text-xs text-gray-500 hidden sm:block">
         <span className="font-medium text-gray-700">{fmtTime(now)}</span>
         <span className="ml-2">{fmtDate(now)}</span>
       </div>
 
-      {/* Bell */}
+      {}
       <div className="relative">
         <button className="w-9 h-9 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors">
           <Bell size={18} className="text-gray-600" />

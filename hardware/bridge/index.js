@@ -8,10 +8,7 @@ const cfg        = require('./src/config');
 const axios      = require('axios');
 
 async function resolveDeviceIds() {
-  /**
-   * Nếu ENTRY_DEVICE_ID / EXIT_DEVICE_ID chưa cấu hình,
-   * tự tra cứu theo serial_port trong bảng devices.
-   */
+  
   if (cfg.ENTRY_DEVICE_ID && cfg.EXIT_DEVICE_ID) return;
 
   try {
@@ -45,10 +42,8 @@ async function main() {
   console.log(` WS Port:    ${cfg.WS_PORT}`);
   console.log('=================================================\n');
 
-  // 1. Khởi WebSocket server
   ws.start();
 
-  // 2. Kiểm tra AI service (không block – retry 10s/lần cho đến khi sẵn sàng)
   let _aiReady = false;
   const health = await ai.healthCheck();
   if (health) {
@@ -69,16 +64,12 @@ async function main() {
     }, 10_000);
   }
 
-  // 3. Tra device UUIDs
   await resolveDeviceIds();
 
-  // 4. Khởi controller (bind events)
   controller.init();
 
-  // 5. Kết nối Arduino qua serial
   serial.connect();
 
-  // 6. Heartbeat – ping Arduino mỗi 30s
   setInterval(() => {
     if (serial.entryReady) serial.ping('entry');
     if (serial.exitReady)  serial.ping('exit');

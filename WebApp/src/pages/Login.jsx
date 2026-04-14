@@ -28,7 +28,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-600 to-blue-800 flex flex-col items-center justify-center px-6">
-      {/* Logo */}
+      {}
       <div className="mb-8 text-center">
         <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
           <span className="text-blue-600 text-3xl font-bold">P</span>
@@ -37,7 +37,7 @@ export default function Login() {
         <p className="text-blue-200 text-sm mt-1">Bãi đỗ xe thông minh</p>
       </div>
 
-      {/* Card */}
+      {}
       <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl p-6">
         <h2 className="text-xl font-bold text-slate-800 mb-5">Đăng nhập</h2>
 

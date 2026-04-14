@@ -2,7 +2,6 @@ const router = require('express').Router();
 const auth = require('../middleware/auth');
 const { pool } = require('../db');
 
-// GET /api/dashboard/stats
 router.get('/stats', auth, async (req, res, next) => {
   try {
     const [lotRes, activeRes, todayRes, deviceRes, alertRes] = await Promise.all([
@@ -49,7 +48,6 @@ router.get('/stats', auth, async (req, res, next) => {
   }
 });
 
-// GET /api/dashboard/hourly-traffic?date=YYYY-MM-DD
 router.get('/hourly-traffic', auth, async (req, res, next) => {
   try {
     const date = req.query.date || new Date().toISOString().split('T')[0];
@@ -71,7 +69,6 @@ router.get('/hourly-traffic', auth, async (req, res, next) => {
   }
 });
 
-// GET /api/dashboard/active-sessions (top 10)
 router.get('/active-sessions', auth, async (req, res, next) => {
   try {
     const result = await pool.query(`

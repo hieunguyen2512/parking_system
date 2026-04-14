@@ -2,7 +2,6 @@ const router = require('express').Router();
 const auth = require('../middleware/auth');
 const { pool } = require('../db');
 
-// POST /api/barriers/:deviceId/open
 router.post('/:deviceId/open', auth, async (req, res, next) => {
   try {
     const { reason } = req.body;
@@ -18,7 +17,6 @@ router.post('/:deviceId/open', auth, async (req, res, next) => {
       return res.status(404).json({ error: 'Không tìm thấy thiết bị barrier' });
     }
 
-    // Ghi audit log bắt buộc
     await pool.query(`
       INSERT INTO manual_overrides (device_id, admin_id, action, reason)
       VALUES ($1, $2, 'open_barrier', $3)
@@ -29,16 +27,12 @@ router.post('/:deviceId/open', auth, async (req, res, next) => {
       VALUES ('BARRIER_MANUAL_OPEN', $1, $2, $3)
     `, [req.params.deviceId, req.admin.id, `Mở thủ công: ${reason.trim()}`]);
 
-    // TODO: Gửi lệnh OPEN_BARRIER tới Arduino qua serial port
-    // Đây sẽ được tích hợp với module pyserial/serial-bridge
-
     res.json({ message: 'Đã ghi lệnh mở barrier', device: devRes.rows[0] });
   } catch (err) {
     next(err);
   }
 });
 
-// GET /api/barriers/logs?deviceId=&limit=20
 router.get('/logs', auth, async (req, res, next) => {
   try {
     const { deviceId, limit = 20 } = req.query;

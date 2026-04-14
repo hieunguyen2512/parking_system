@@ -69,12 +69,10 @@ export default function EventLogs() {
     finally { setLoading(false) }
   }, [search, filterType])
 
-  // Fetch on filter change, reset to page 1
   useEffect(() => {
     fetchLogs(1)
   }, [search, filterType])
 
-  // Auto-refresh
   useEffect(() => {
     if (autoRefresh) {
       timerRef.current = setInterval(() => fetchLogs(1), 10000)
@@ -101,7 +99,7 @@ export default function EventLogs() {
 
   return (
     <div className="space-y-5">
-      {/* Toolbar */}
+      {}
       <div className="flex flex-wrap gap-3 items-center">
         <div className="relative">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -151,7 +149,7 @@ export default function EventLogs() {
         <span className="text-sm text-gray-500">{total} sự kiện</span>
       </div>
 
-      {/* Table */}
+      {}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
@@ -192,7 +190,7 @@ export default function EventLogs() {
         </div>
       </div>
 
-      {/* Phân trang */}
+      {}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <button

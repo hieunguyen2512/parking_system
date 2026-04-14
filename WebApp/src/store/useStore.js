@@ -5,7 +5,7 @@ import {
 } from '../api/services';
 
 export const useStore = create((set, get) => ({
-  // ── Auth ─────────────────────────────────────────────────────
+
   isAuthenticated: !!localStorage.getItem('user_token'),
   currentUser: JSON.parse(localStorage.getItem('user_info') || 'null'),
 
@@ -42,7 +42,7 @@ export const useStore = create((set, get) => ({
       localStorage.setItem('user_info', JSON.stringify(user));
       set(state => ({
         currentUser: user,
-        // Chỉ cập nhật balance từ me endpoint, giữ nguyên threshold từ fetchWallet
+
         wallet: state.wallet
           ? { ...state.wallet, balance: data.wallet_balance ?? state.wallet.balance }
           : { balance: data.wallet_balance, low_balance_threshold: null },
@@ -50,7 +50,6 @@ export const useStore = create((set, get) => ({
     } catch {}
   },
 
-  // ── Wallet ──────────────────────────────────────────────────
   wallet: null,
   walletTransactions: [],
   walletPage: 1,
@@ -72,7 +71,7 @@ export const useStore = create((set, get) => ({
 
   async topup(amount, gateway) {
     const data = await walletApi.topup({ amount, payment_gateway: gateway });
-    // Refresh wallet từ server để đảm bảo balance và threshold đúng
+
     try {
       const fresh = await walletApi.info();
       set({ wallet: fresh });
@@ -84,7 +83,6 @@ export const useStore = create((set, get) => ({
     return data;
   },
 
-  // ── Vehicles ────────────────────────────────────────────────
   vehicles: [],
 
   async fetchVehicles() {
@@ -112,7 +110,6 @@ export const useStore = create((set, get) => ({
     set(state => ({ vehicles: state.vehicles.filter(v => v.id !== id) }));
   },
 
-  // ── Sessions ────────────────────────────────────────────────
   sessions: [],
   sessionsPage: 1,
   sessionsTotal: 0,
@@ -134,7 +131,6 @@ export const useStore = create((set, get) => ({
     } catch {}
   },
 
-  // ── Authorizations ──────────────────────────────────────────
   authorizations: [],
 
   async fetchAuthorizations() {

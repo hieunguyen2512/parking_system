@@ -6,7 +6,6 @@ const userAuth = require('../../middleware/userAuth');
 
 const UPLOADS_ROOT = path.join(__dirname, '..', '..', '..', 'uploads');
 
-// GET /api/user/vehicles
 router.get('/', userAuth, async (req, res, next) => {
   try {
     const result = await pool.query(
@@ -18,16 +17,13 @@ router.get('/', userAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// POST /api/user/vehicles
 router.post('/', userAuth, async (req, res, next) => {
   try {
     const { license_plate, nickname } = req.body;
     if (!license_plate) return res.status(400).json({ error: 'Thiếu biển số xe' });
 
-    // Chuẩn hóa biển số
     const normalized = license_plate.trim().toUpperCase().replace(/\s+/g, '');
 
-    // Kiểm tra trùng
     const existing = await pool.query(
       'SELECT vehicle_id FROM vehicles WHERE license_plate = $1',
       [normalized]
@@ -46,7 +42,6 @@ router.post('/', userAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// PUT /api/user/vehicles/:id
 router.put('/:id', userAuth, async (req, res, next) => {
   try {
     const { nickname } = req.body;
@@ -61,10 +56,9 @@ router.put('/:id', userAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// DELETE /api/user/vehicles/:id
 router.delete('/:id', userAuth, async (req, res, next) => {
   try {
-    // Kiểm tra xe có đang trong bãi không
+
     const active = await pool.query(
       `SELECT session_id FROM parking_sessions
        WHERE vehicle_id = $1 AND status = 'active' LIMIT 1`,
@@ -85,7 +79,6 @@ router.delete('/:id', userAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// POST /api/user/vehicles/:id/plate-image – upload ảnh biển số cho xe
 router.post('/:id/plate-image', userAuth, async (req, res, next) => {
   try {
     const { image_data } = req.body;
@@ -98,21 +91,18 @@ router.post('/:id/plate-image', userAuth, async (req, res, next) => {
     const buffer = Buffer.from(matches[2], 'base64');
     if (buffer.length > 5 * 1024 * 1024) return res.status(400).json({ error: 'Ảnh quá lớn. Tối đa 5MB' });
 
-    // Kiểm tra xe thuộc user
     const vRes = await pool.query(
       'SELECT vehicle_id, plate_image_path FROM vehicles WHERE vehicle_id = $1 AND user_id = $2',
       [req.params.id, req.user.id]
     );
     if (!vRes.rows[0]) return res.status(404).json({ error: 'Không tìm thấy xe' });
 
-    // Xóa ảnh cũ nếu có
     const oldPath = vRes.rows[0].plate_image_path;
     if (oldPath) {
       const oldFull = path.join(UPLOADS_ROOT, oldPath);
       try { if (fs.existsSync(oldFull)) fs.unlinkSync(oldFull); } catch (_) {}
     }
 
-    // Lưu ảnh mới
     const plateDir     = path.join(UPLOADS_ROOT, 'plates', req.user.id);
     fs.mkdirSync(plateDir, { recursive: true });
     const filename     = `${req.params.id}-${Date.now()}.${ext}`;
@@ -130,7 +120,6 @@ router.post('/:id/plate-image', userAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// DELETE /api/user/vehicles/:id/plate-image – xóa ảnh biển số
 router.delete('/:id/plate-image', userAuth, async (req, res, next) => {
   try {
     const vRes = await pool.query(
